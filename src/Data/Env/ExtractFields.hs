@@ -30,6 +30,9 @@ import           System.Environment
 
 -- | Type class for extracting field names from a record type.
 class ExtractFields a where
+  -- | Extract field names from a record type. It uses a 'Proxy' to avoid
+  -- needing a value of type $a$, and we recommend using 'extractFields'
+  -- instead.
   extractFields' :: Proxy a -> [String]
 
 -- | Extract field names from a record type.
@@ -54,11 +57,6 @@ getEnvRawLowerToUpperSnake :: forall a m. (MonadIO m, ExtractFields a)
 getEnvRawLowerToUpperSnake = getEnvRaw @a (map toUpper)
 {-# INLINE getEnvRawLowerToUpperSnake #-}
 
-
---------------------------------------------------------------------------------
--- Generic instances
---------------------------------------------------------------------------------
-
 -- | Retrieve environment variables based on field names, converting them from
 -- camel case (record field naming) to upper snake case (environment variable
 -- naming).
@@ -67,6 +65,13 @@ getEnvRawCamelCaseToUpperSnake :: forall a m. (MonadIO m, ExtractFields a)
 getEnvRawCamelCaseToUpperSnake = getEnvRaw @a camelToUpperSnake
 {-# INLINE getEnvRawCamelCaseToUpperSnake #-}
 
+
+--------------------------------------------------------------------------------
+-- Generic instances
+--------------------------------------------------------------------------------
+
+-- | Generic helper class for extracting field names from a generic
+-- representation.
 class GExtractFields f where
   gExtractFields :: Proxy f -> [String]
 

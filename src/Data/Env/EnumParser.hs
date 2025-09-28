@@ -20,6 +20,7 @@ module Data.Env.EnumParser where
 
 import           Data.Env.TypeParser (TypeParser(..))
 
+-- | A helper type for parsing Bounded Enums.
 newtype EnumParser a = EnumParser a
   deriving (Show, Eq)
 
