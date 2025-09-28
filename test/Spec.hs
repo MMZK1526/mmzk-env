@@ -1,4 +1,5 @@
 import           Data.Either (isLeft)
+import           Data.Env.EnumParser
 import           Data.Env.RecordParser
 import           Data.Env.TypeParser
 import           Data.Int (Int8, Int16, Int32, Int64)
@@ -146,7 +147,8 @@ typeParserSpecSpec = describe "parseType" do
 
 
 data Gender = Male | Female
-  deriving (Show, Eq)
+  deriving (Show, Eq, Enum, Bounded)
+  deriving TypeParser via (EnumParser Gender)
 
 data Person = Person
   { name   :: String
@@ -166,7 +168,7 @@ recordParserSpec = describe "parseRecord" do
     let env = M.fromList [("name", "Alice"), ("age", "30"), ("gender", "Female")]
     parseRecord @Person env `shouldBe` Right (Person "Alice" 30 (Just Female))
   it "fails to parse an invalid record" do
-    let env = M.fromList [("name", "Alice"), ("age", "thirty")]
+    let env = M.fromList [("name", "Alice"), ("age", "30"), ("gender", "Other")]
     parseRecord @Person env `shouldSatisfy` isLeft
   it "fails to parse a missing field" do
     let env = M.fromList [("name", "Alice")]

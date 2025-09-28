@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               mmzk-env
-version:            0.1.0.0
+version:            0.1.1.0
 
 synopsis:           Read environment variables into a user-defined data type
 description:
@@ -26,6 +26,7 @@ common settings
         BlockArguments
         DeriveAnyClass
         DeriveGeneric
+        DerivingVia
         FlexibleContexts
         FlexibleInstances
         InstanceSigs
@@ -47,6 +48,7 @@ library
     import:           settings
     exposed-modules:
         Data.Env
+        Data.Env.EnumParser
         Data.Env.ExtractFields
         Data.Env.RecordParser
         Data.Env.TypeParser
@@ -63,6 +65,7 @@ test-suite test
     type:             exitcode-stdio-1.0
     other-modules:
         Data.Env
+        Data.Env.EnumParser
         Data.Env.ExtractFields
         Data.Env.RecordParser
         Data.Env.TypeParser

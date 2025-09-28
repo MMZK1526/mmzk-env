@@ -34,3 +34,20 @@ main = do
 With this setup, it requires the environment variables `PORT`, `NAME`, `MAIN_HOST`, and `DEBUG` to be set according to the types defined in the `Config` data type. The library will automatically parse these variables and validate them against the schema.
 
 If any variable is missing or has an incorrect type, the validation will fail, and an error message will be printed.
+
+## Enum Support
+
+The library also supports automatic parsing of enumerated types. You can define an enum and derive the `TypeParser` instance using the helper type `EnumParser`.
+
+The extension `DerivingVia` is required for this feature.
+
+```Haskell
+{-# LANGUAGE DerivingVia #-}
+
+data Gender = Male | Female
+  deriving (Show, Eq, Enum, Bounded)
+  deriving TypeParser via (EnumParser Gender)
+
+print $ parseEnum @Gender "Male"   -- Right Male
+print $ parseEnum @Gender "Female" -- Right Female
+```
