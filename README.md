@@ -16,10 +16,10 @@ import           GHC.Generics
 
 -- | Example: Define an environment schema
 data Config = Config
-    { port :: Int
-    , name :: String
+    { port     :: Int
+    , name     :: String
     , mainHost :: String
-    , debug :: Maybe Bool }
+    , debug    :: Maybe Bool }
     deriving (Show, Generic, EnvSchema)
 
 -- | Run the validation
