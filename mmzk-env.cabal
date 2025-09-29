@@ -8,8 +8,8 @@ description:
     variables into user-defined data types, allowing for flexible and type-safe
     configuration management.
 
-homepage:           https://github.com/MMZK1526/mmzk-typeid
-bug-reports:        https://github.com/MMZK1526/mmzk-typeid/issues
+homepage:           https://github.com/MMZK1526/mmzk-env
+bug-reports:        https://github.com/MMZK1526/mmzk-env/issues
 license:            MIT
 author:             Yitang Chen <mmzk1526@outlook.com>
 maintainer:         Yitang Chen <mmzk1526@outlook.com>
