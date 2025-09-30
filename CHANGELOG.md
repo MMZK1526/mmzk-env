@@ -1,5 +1,10 @@
 # Revision history for mmzk-env
 
+## 0.1.1.1 -- 2025-09-29
+
+* Fix typo in the cabal file.
+
+
 ## 0.1.1.0 -- 2025-09-28
 
 * Added support for parsing enumerated types using `EnumParser`.
