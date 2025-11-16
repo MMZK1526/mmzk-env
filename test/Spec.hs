@@ -4,6 +4,8 @@ import           Data.Env.RecordParser
 import           Data.Env.TypeParser
 import           Data.Int (Int8, Int16, Int32, Int64)
 import qualified Data.Map as M
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Generics
 import           Test.Hspec
@@ -20,6 +22,16 @@ typeParserSpecSpec = describe "parseType" do
       parseType @String "hello" `shouldBe` Right "hello"
     it "does not parse empty string" do
       parseType @String "" `shouldSatisfy` isLeft
+  describe "parse strict Text" do
+    it "parses non-empty string" do
+      parseType @T.Text "hello" `shouldBe` Right "hello"
+    it "does not parse empty string" do
+      parseType @T.Text "" `shouldSatisfy` isLeft
+  describe "parse lazy Text" do
+    it "parses non-empty string" do
+      parseType @TL.Text "hello" `shouldBe` Right "hello"
+    it "does not parse empty string" do
+      parseType @TL.Text "" `shouldSatisfy` isLeft
   describe "parse Bool" do
     it "parses True" do
       parseType @Bool "True" `shouldBe` Right True

@@ -1,5 +1,11 @@
 # Revision history for mmzk-env
 
+
+## 0.1.2.0 -- 2025-11-16
+
+* Add spport for parsing `Text`.
+
+
 ## 0.1.1.1 -- 2025-09-29
 
 * Fix typo in the cabal file.

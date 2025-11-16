@@ -14,6 +14,8 @@ module Data.Env.TypeParser (
 ) where
 
 import           Data.Int (Int8, Int16, Int32, Int64)
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Generics
 import qualified Text.Gigaparsec as P
@@ -126,6 +128,18 @@ instance TypeParser Word32 where
 instance TypeParser Word64 where
   parseType :: String -> Either String Word64
   parseType = parse (L.decimal64 naturalParser)
+  {-# INLINE parseType #-}
+
+-- | Required strict @Text@ field (parsed from String)
+instance TypeParser T.Text where
+  parseType :: String -> Either String T.Text
+  parseType = fmap T.pack . parseType
+  {-# INLINE parseType #-}
+
+-- | Required lazy @Text@ field (parsed from String)
+instance TypeParser TL.Text where
+  parseType :: String -> Either String TL.Text
+  parseType = fmap TL.pack . parseType
   {-# INLINE parseType #-}
 
 -- | Required @()@ field (parsed from String).
