@@ -64,18 +64,10 @@ test-suite test
     import:           settings
     main-is:          Spec.hs
     type:             exitcode-stdio-1.0
-    other-modules:
-        Data.Env
-        Data.Env.EnumParser
-        Data.Env.ExtractFields
-        Data.Env.RecordParser
-        Data.Env.TypeParser
     build-depends:
         base >=4.16 && <5,
         containers,
-        gigaparsec,
         hspec ^>=2.11,
+        mmzk-env,
         text,
-    hs-source-dirs:
-        src
-        test
+    hs-source-dirs:   test
