@@ -1,6 +1,5 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Module: Data.Env.TypeParser
@@ -16,6 +15,7 @@ module Data.Env.TypeParser (
 import           Data.Int (Int8, Int16, Int32, Int64)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import Data.Tuple ( Solo(..) )
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Generics
 import qualified Text.Gigaparsec as P
@@ -146,6 +146,12 @@ instance TypeParser TL.Text where
 instance TypeParser () where
   parseType :: String -> Either String ()
   parseType = parse (P.string "()" P.$> ())
+  {-# INLINE parseType #-}
+
+-- | Solo fields isomorphic to the original (@Solo a@).
+instance TypeParser a => TypeParser (Solo a) where
+  parseType :: String -> Either String (Solo a)
+  parseType s = MkSolo <$> parseType s
   {-# INLINE parseType #-}
 
 -- | Optional fields (@Maybe a@).
