@@ -1,6 +1,20 @@
 # Revision history for mmzk-env
 
 
+## 0.2.0.0 -- Unreleased
+
+* Witnessed record parsing (witness types carry type-level information that determines parsing behaviour):
+  * Add `RecordParserW` for witnessed record parsing.
+  * Add `TypeParserW` for witnessed type parsing.
+  * Add `DefaultNum` witness type for providing default numeric values.
+  
+* Add convenient `Maybe` result variants for parsers.
+
+* Add more examples and tests.
+
+* Heavy refactoring.
+
+
 ## 0.1.2.0 -- 2025-11-16
 
 * Add support for parsing `Text`.
