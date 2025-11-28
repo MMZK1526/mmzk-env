@@ -24,6 +24,7 @@ common settings
     ghc-options: -Wall
     default-extensions:
         BlockArguments
+        DataKinds
         DeriveAnyClass
         DeriveGeneric
         DerivingVia
@@ -51,7 +52,9 @@ library
         Data.Env.EnumParser
         Data.Env.ExtractFields
         Data.Env.RecordParser
+        Data.Env.RecordParserP
         Data.Env.TypeParser
+        Data.Env.TypeParserP
     build-depends:
         base >=4.16 && <5,
         containers >= 0.6.7 && < 0.7,
