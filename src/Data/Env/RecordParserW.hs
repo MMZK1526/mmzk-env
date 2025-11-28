@@ -3,14 +3,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Data.Env.RecordParserP where
+module Data.Env.RecordParserW where
 
 import           Data.Map (Map)
 import           GHC.Generics
 import qualified Data.Map as M
 import           Data.Maybe
 import Data.Kind
-import Data.Env.TypeParserP
+import Data.Env.TypeParserW
 import Data.Data
 import Data.Tuple
 
@@ -21,16 +21,16 @@ type family Column (t :: ColumnType) (p :: Type) (a :: Type) where
   Column 'Dec p a = (p, a)
   Column 'Res p a = a
 
-class RecordParserP a where
+class RecordParserW a where
   type RecordParsedType a
 
-  parseRecordP :: Map String String -> Either String (RecordParsedType a)
+  parseRecordW :: Map String String -> Either String (RecordParsedType a)
 
-instance (Generic (a 'Dec), GRecordParserP (Rep (a 'Dec)), Generic (a Res), GRecordParsedType (Rep (a 'Dec)) () ~ Rep (a 'Res) ()) => RecordParserP (a 'Dec) where
+instance (Generic (a 'Dec), GRecordParserW (Rep (a 'Dec)), Generic (a Res), GRecordParsedType (Rep (a 'Dec)) () ~ Rep (a 'Res) ()) => RecordParserW (a 'Dec) where
   type RecordParsedType (a 'Dec) = a 'Res
 
-  parseRecordP :: Map String String -> Either String (RecordParsedType (a 'Dec))
-  parseRecordP a = to <$> gParseRecord @(Rep (a 'Dec)) a
+  parseRecordW :: Map String String -> Either String (RecordParsedType (a 'Dec))
+  parseRecordW a = to <$> gParseRecord @(Rep (a 'Dec)) a
 
 
 --------------------------------------------------------------------------------
@@ -38,40 +38,40 @@ instance (Generic (a 'Dec), GRecordParserP (Rep (a 'Dec)), Generic (a Res), GRec
 --------------------------------------------------------------------------------
 
 -- | Generic validation class.
-class GRecordParserP f where
+class GRecordParserW f where
   type GRecordParsedType f :: k -> Type
 
   gParseRecord :: Map String String -> Either String ((GRecordParsedType f) r)
 
 -- | Handle metadata (wrapping fields in `M1`)
-instance GRecordParserP f => GRecordParserP (M1 D c f) where
+instance GRecordParserW f => GRecordParserW (M1 D c f) where
   type GRecordParsedType (M1 D c f) = M1 D c (GRecordParsedType f)
 
   gParseRecord :: Map String String -> Either String (GRecordParsedType (M1 D c f) r)
   gParseRecord env = M1 <$> gParseRecord @f env
 
 -- | Handle metadata (wrapping fields in `M1`)
-instance GRecordParserP f => GRecordParserP (M1 C c f) where
+instance GRecordParserW f => GRecordParserW (M1 C c f) where
   type GRecordParsedType (M1 C c f) = M1 C c (GRecordParsedType f)
 
   gParseRecord :: Map String String -> Either String (GRecordParsedType (M1 C c f) r)
   gParseRecord env = M1 <$> gParseRecord @f env
 
 -- | Handle multiple fields in a record
-instance (GRecordParserP f, GRecordParserP g) => GRecordParserP (f :*: g) where
+instance (GRecordParserW f, GRecordParserW g) => GRecordParserW (f :*: g) where
   type GRecordParsedType (f :*: g) = GRecordParsedType f :*: GRecordParsedType g
 
   gParseRecord :: Map String String -> Either String ((GRecordParsedType f :*: GRecordParsedType g) p)
   gParseRecord env = (:*:) <$> gParseRecord @f env <*> gParseRecord @g env
 
 -- | Handle individual fields
-instance (TypeParserP p a, Selector s) => GRecordParserP (M1 S s (K1 i (p, a))) where
+instance (TypeParserW p a, Selector s) => GRecordParserW (M1 S s (K1 i (p, a))) where
   type GRecordParsedType (M1 S s (K1 i (p, a))) = M1 S s (K1 i a)
-  
+
   gParseRecord :: Map String String -> Either String (M1 S s (K1 i a) r)
   gParseRecord env =
     let key = selName (undefined :: M1 S s (K1 i a) p)
-    in  M1 . K1 <$> case parseTypeP @p Proxy (fromMaybe "" $ M.lookup key env) of
+    in  M1 . K1 <$> case parseTypeW @p Proxy (fromMaybe "" $ M.lookup key env) of
         Left err  -> Left $ "Field " ++ show key ++ " parsing error:\n" ++ err
         Right val -> Right val
 
