@@ -36,6 +36,16 @@ class TypeParser a where
   parseType s = to <$> gTypeParser s
   {-# INLINE parseType #-}
 
+  -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseType' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseType' :: String -> Maybe a
+  parseType' str = case parseType str of
+    Right val -> Just val
+    Left _    -> Nothing
+  {-# INLINE parseType' #-}
+
 -- | Required (non-empty) String field.
 --
 -- in POSIX systems, an empty env variable is equivalent to an undefined env

@@ -22,6 +22,15 @@ import           Data.Maybe
 class RecordParser a where
   parseRecord :: Map String String -> Either String a
 
+  -- | Parse a record, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseRecord' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseRecord' :: Map String String -> Maybe a
+  parseRecord' env = case parseRecord env of
+    Right val -> Just val
+    Left _    -> Nothing
+
 instance (Generic a, GRecordParser (Rep a)) => RecordParser a where
 
   parseRecord :: (Generic a, GRecordParser (Rep a))

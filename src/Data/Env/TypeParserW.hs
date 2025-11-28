@@ -29,6 +29,15 @@ class TypeParserW p a | p -> a where
   -- how the parsing should be performed.
   parseTypeW :: Proxy p -> String -> Either String a
 
+  -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseTypeW' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseTypeW' :: Proxy p -> String -> Maybe a
+  parseTypeW' proxy str = case parseTypeW proxy str of
+    Right val -> Just val
+    Left _    -> Nothing
+
 instance TypeParser a => TypeParserW (Solo a) a where
   parseTypeW :: Proxy (Solo a) -> String -> Either String a
   parseTypeW _ = parseType

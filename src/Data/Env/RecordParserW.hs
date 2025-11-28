@@ -24,6 +24,15 @@ class RecordParserW a where
 
   parseRecordW :: Map String String -> Either String (RecordParsedType a)
 
+  -- | Parse a record, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseRecordW' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseRecordW' :: Map String String -> Maybe (RecordParsedType a)
+  parseRecordW' env = case parseRecordW @a env of
+    Right val -> Just val
+    Left _    -> Nothing
+
 instance (Generic (a 'Dec), GRecordParserW (Rep (a 'Dec)), Generic (a Res), GRecordParsedType (Rep (a 'Dec)) () ~ Rep (a 'Res) ()) => RecordParserW (a 'Dec) where
   type RecordParsedType (a 'Dec) = a 'Res
 
