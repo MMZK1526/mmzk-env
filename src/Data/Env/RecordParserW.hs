@@ -1,7 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Data.Env.RecordParserW where
 
@@ -12,7 +11,6 @@ import           Data.Maybe
 import Data.Kind
 import Data.Env.TypeParserW
 import Data.Data
-import Data.Tuple
 
 data ColumnType = Dec | Res
   deriving stock (Eq, Show)
@@ -75,14 +73,4 @@ instance (TypeParserW p a, Selector s) => GRecordParserW (M1 S s (K1 i (p, a))) 
         Left err  -> Left $ "Field " ++ show key ++ " parsing error:\n" ++ err
         Right val -> Right val
 
-type DiSolo c a = Column c (Solo a) a
-
-data Config c = Config
-    { port     :: DiSolo c (Maybe Int)
-    , name     :: DiSolo c (Maybe String)
-    , mainHost :: DiSolo c (Maybe String)
-    , debug    :: DiSolo c (Maybe Bool)
-    }
-    deriving (Generic)
-
-deriving instance Show (Config 'Res)
+type Di f c a = Column c (f a) a

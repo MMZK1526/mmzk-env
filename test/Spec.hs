@@ -9,11 +9,15 @@ import qualified Data.Text.Lazy as TL
 import           Data.Word (Word8, Word16, Word32, Word64)
 import           GHC.Generics
 import           Test.Hspec
+import Data.Env.RecordParserW
+import Data.Env.TypeParserW
+import Data.Env.Witness.DefaultNum
 
 main :: IO ()
 main = do
   hspec typeParserSpecSpec
   hspec recordParserSpec
+  hspec configParserSpec
 
 typeParserSpecSpec :: Spec
 typeParserSpecSpec = describe "parseType" do
@@ -185,3 +189,24 @@ recordParserSpec = describe "parseRecord" do
   it "fails to parse a missing field" do
     let env = M.fromList [("name", "Alice")]
     parseRecord @Person env `shouldSatisfy` isLeft
+
+data Config c = Config
+  { port :: Di (DefaultNum 5432) c Int
+  , env  :: Di Solo c String
+  }
+  deriving (Generic)
+
+deriving instance Show (Config 'Res)
+deriving instance Eq (Config 'Res)
+
+configParserSpec :: Spec
+configParserSpec = describe "parseRecordW for Config" do
+  it "uses default port 5432 when port not specified" do
+    let envMap = M.fromList [("env", "production")]
+    parseRecordW @(Config 'Dec) envMap `shouldBe` Right (Config 5432 "production")
+  it "parses config with custom port" do
+    let envMap = M.fromList [("port", "8080"), ("env", "development")]
+    parseRecordW @(Config 'Dec) envMap `shouldBe` Right (Config 8080 "development")
+  it "fails to parse invalid port value" do
+    let envMap = M.fromList [("port", "not-a-number"), ("env", "test")]
+    parseRecordW @(Config 'Dec) envMap `shouldSatisfy` isLeft
