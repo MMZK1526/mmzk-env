@@ -68,6 +68,10 @@ library
 test-suite test
     import:           settings
     main-is:          Spec.hs
+    other-modules:
+        TypeParserSpec
+        RecordParserSpec
+        ConfigParserSpec
     type:             exitcode-stdio-1.0
     build-depends:
         base >=4.16 && <5,
@@ -75,4 +79,6 @@ test-suite test
         hspec ^>=2.11,
         mmzk-env,
         text,
+    build-tool-depends:
+        hspec-discover:hspec-discover ^>=2.11
     hs-source-dirs:   test
