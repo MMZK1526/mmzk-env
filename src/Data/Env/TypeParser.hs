@@ -1,5 +1,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE CPP #-}
 
 -- |
 -- Module: Data.Env.TypeParser
@@ -161,7 +162,11 @@ instance TypeParser () where
 -- | Solo fields isomorphic to the original (@Solo a@).
 instance TypeParser a => TypeParser (Solo a) where
   parseType :: String -> Either String (Solo a)
+#if MIN_VERSION_base(4,18,0)
   parseType s = MkSolo <$> parseType s
+#else
+  parseType s = Solo <$> parseType s
+#endif
   {-# INLINE parseType #-}
 
 -- | Optional fields (@Maybe a@).
