@@ -4,13 +4,13 @@
 
 module Data.Env.RecordParserW where
 
-import           Data.Map (Map)
-import           GHC.Generics
-import qualified Data.Map as M
-import           Data.Maybe
-import Data.Kind
-import Data.Env.TypeParserW
 import Data.Data
+import Data.Env.TypeParserW
+import Data.Kind
+import Data.Map ( Map )
+import Data.Map qualified as M
+import Data.Maybe
+import GHC.Generics
 
 data ColumnType = Dec | Res
   deriving stock (Eq, Show)

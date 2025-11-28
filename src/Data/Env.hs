@@ -4,11 +4,11 @@
 --
 -- This module provides functionality to validate environment variables against
 -- a schema (a type that implements the `EnvSchema` class).
-module Data.Env (EnvSchema(..)) where
+module Data.Env ( EnvSchema(..) ) where
 
-import           Control.Monad.IO.Class
-import           Data.Env.ExtractFields
-import           Data.Env.RecordParser
+import Control.Monad.IO.Class
+import Data.Env.ExtractFields
+import Data.Env.RecordParser
 
 -- | Type class for validating environment schemas.
 class (ExtractFields a, RecordParser a) => EnvSchema a where

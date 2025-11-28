@@ -1,12 +1,12 @@
 module RecordParserSpec (spec) where
 
-import           Data.Either (isLeft)
-import           Data.Env.EnumParser
-import           Data.Env.RecordParser
-import           Data.Env.TypeParser
-import qualified Data.Map as M
-import           GHC.Generics
-import           Test.Hspec
+import Data.Either ( isLeft )
+import Data.Env.EnumParser
+import Data.Env.RecordParser
+import Data.Env.TypeParser
+import Data.Map qualified as M
+import GHC.Generics
+import Test.Hspec
 
 data Gender = Male | Female
   deriving (Show, Eq, Enum, Bounded)

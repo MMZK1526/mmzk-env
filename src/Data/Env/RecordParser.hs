@@ -12,11 +12,11 @@ module Data.Env.RecordParser (
   RecordParser (..),
 ) where
 
-import           Data.Env.TypeParser
-import           Data.Map (Map)
-import           GHC.Generics
-import qualified Data.Map as M
-import           Data.Maybe
+import Data.Env.TypeParser
+import Data.Map ( Map )
+import Data.Map qualified as M
+import Data.Maybe
+import GHC.Generics
 
 -- | Type class for validating environment schemas.
 class RecordParser a where

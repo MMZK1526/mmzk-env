@@ -21,7 +21,11 @@ import Data.Tuple ( Solo )
 -- * [TODO] You want to compose parsers in different ways
 --
 -- The functional dependency @p -> a@ ensures that each witness type uniquely
--- determines the result type.
+-- determines the result type. For example, 'Data.Env.Witness.DefaultNum.DefaultNum' 5432 Int
+-- uniquely determines the result type as Int.
+--
+-- See 'Data.Env.Witness.DefaultNum.DefaultNum' for an example of how to use witness types with
+-- this class.
 class TypeParserW p a | p -> a where
   -- | Parse a value by its string representation using the witness type @p@.
   --

@@ -1,12 +1,12 @@
 module ConfigParserSpec (spec) where
 
-import           Data.Either (isLeft)
-import           Data.Env.RecordParserW
-import           Data.Env.TypeParserW
-import           Data.Env.Witness.DefaultNum
-import qualified Data.Map as M
-import           GHC.Generics
-import           Test.Hspec
+import Data.Either ( isLeft )
+import Data.Env.RecordParserW
+import Data.Env.TypeParserW
+import Data.Env.Witness.DefaultNum
+import Data.Map qualified as M
+import GHC.Generics
+import Test.Hspec
 
 data Config c = Config
   { port :: Di (DefaultNum 5432) c Int

@@ -12,19 +12,19 @@ module Data.Env.TypeParser (
   TypeParser (..),
 ) where
 
-import           Data.Int (Int8, Int16, Int32, Int64)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
+import Data.Int (Int8, Int16, Int32, Int64)
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
 import Data.Tuple ( Solo(..) )
-import           Data.Word (Word8, Word16, Word32, Word64)
-import           GHC.Generics
-import qualified Text.Gigaparsec as P
-import qualified Text.Gigaparsec.Char as P
-import qualified Text.Gigaparsec.Combinator as P
-import qualified Text.Gigaparsec.Errors.ErrorGen as P
-import qualified Text.Gigaparsec.Errors.Combinator as P
-import qualified Text.Gigaparsec.Token.Descriptions as L
-import qualified Text.Gigaparsec.Token.Lexer as L
+import Data.Word (Word8, Word16, Word32, Word64)
+import GHC.Generics
+import Text.Gigaparsec qualified as P
+import Text.Gigaparsec.Char qualified as P
+import Text.Gigaparsec.Combinator qualified as P
+import Text.Gigaparsec.Errors.ErrorGen qualified as P
+import Text.Gigaparsec.Errors.Combinator qualified as P
+import Text.Gigaparsec.Token.Descriptions qualified as L
+import Text.Gigaparsec.Token.Lexer qualified as L
 
 -- | Type class for parsers associated with types.
 class TypeParser a where

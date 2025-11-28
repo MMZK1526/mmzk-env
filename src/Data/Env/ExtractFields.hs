@@ -17,16 +17,15 @@ module Data.Env.ExtractFields (
   getEnvRawCamelCaseToUpperSnake,
 ) where
 
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Data.Char
-
-import           Data.Maybe
-import           Data.Map (Map)
-import           Data.Proxy
-import           GHC.Generics
-import qualified Data.Map as M
-import           System.Environment
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.Char
+import Data.Map ( Map )
+import Data.Map qualified as M
+import Data.Maybe
+import Data.Proxy
+import GHC.Generics
+import System.Environment
 
 -- | Type class for extracting field names from a record type.
 class ExtractFields a where

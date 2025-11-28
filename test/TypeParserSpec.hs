@@ -1,12 +1,12 @@
 module TypeParserSpec (spec) where
 
-import           Data.Either (isLeft)
-import           Data.Env.TypeParser
-import           Data.Int (Int8, Int16, Int32, Int64)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import           Data.Word (Word8, Word16, Word32, Word64)
-import           Test.Hspec
+import Data.Either ( isLeft )
+import Data.Env.TypeParser
+import Data.Int ( Int8, Int16, Int32, Int64 )
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
+import Data.Word ( Word8, Word16, Word32, Word64 )
+import Test.Hspec
 
 spec :: Spec
 spec = describe "parseType" do

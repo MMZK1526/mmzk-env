@@ -30,6 +30,7 @@ common settings
         DerivingVia
         FlexibleContexts
         FlexibleInstances
+        ImportQualifiedPost
         InstanceSigs
         LambdaCase
         MultiWayIf
