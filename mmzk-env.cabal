@@ -70,7 +70,8 @@ test-suite test
     import:           settings
     main-is:          Spec.hs
     other-modules:
-        TypeParserSpec
+        BasicTypeParserSpec
+        EnumParserSpec
         RecordParserSpec
         RecordParserWSpec
     type:             exitcode-stdio-1.0

@@ -1,4 +1,4 @@
-module TypeParserSpec (spec) where
+module BasicTypeParserSpec ( spec ) where
 
 import Data.Either ( isLeft )
 import Data.Env.TypeParser
