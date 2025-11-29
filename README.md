@@ -134,7 +134,7 @@ With witness types, you can specify parsing behaviour at the type level while ke
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-import Data.Env.RecordParserW
+import Data.Env
 import Data.Env.Witness.DefaultNum
 import Data.Word
 import GHC.Generics
@@ -143,16 +143,17 @@ import Data.Env.TypeParserW
 data Config c = Config
   { psqlPort :: Column c (DefaultNum 5432 Word16) Word16  -- Defaults to 5432
   , dbName   :: Column c (Solo String) String }
-  deriving (Generic)
+  deriving (Generic, EnvSchemaW)
 
+instance EnvSchemaW (Config \'Dec)
 deriving stock instance Show (Config 'Res)  -- For printing the result
 
--- Parse with defaults
+-- Validate environment variables with defaults
 main :: IO ()
 main = do
-  errOrConfig <- parseRecordW @(Config 'Dec) mempty
+  errOrConfig <- validateEnvW @(Config 'Dec)
   case errOrConfig of
-    Left err  -> putStrLn $ "Parse failed: " ++ err
+    Left err  -> putStrLn $ "Validation failed: " ++ err
     Right cfg -> connectToDatabase cfg  -- cfg :: Config 'Res
 ```
 

@@ -7,11 +7,11 @@
 
 module Main where
 
-import Data.Env.RecordParserW
+import Data.Env
 import Data.Env.Witness.DefaultNum
-import qualified Data.Map as M
 import Data.Word
 import GHC.Generics
+import Data.Env.RecordParserW
 import Data.Env.TypeParserW
 
 data Config c = Config
@@ -19,19 +19,13 @@ data Config c = Config
   , dbName   :: Column c (Solo String) String }
   deriving (Generic)
 
+instance EnvSchemaW (Config 'Dec)
 deriving stock instance Show (Config 'Res)  -- For printing the result
 
--- Parse with defaults
+-- Validate environment variables with defaults
 main :: IO ()
 main = do
-  -- Example 1: Empty environment (uses defaults)
-  let emptyEnv = M.empty
-  case parseRecordW @(Config 'Dec) emptyEnv of
-    Left err  -> putStrLn $ "Parse failed: " ++ err
+  errOrConfig <- validateEnvW @(Config 'Dec)
+  case errOrConfig of
+    Left err  -> putStrLn $ "Validation failed: " ++ err
     Right cfg -> putStrLn $ "Config with defaults: " ++ show cfg
-
-  -- Example 2: Custom values
-  let customEnv = M.fromList [("psqlPort", "8080"), ("dbName", "mydb")]
-  case parseRecordW @(Config 'Dec) customEnv of
-    Left err  -> putStrLn $ "Parse failed: " ++ err
-    Right cfg -> putStrLn $ "Config with custom values: " ++ show cfg
