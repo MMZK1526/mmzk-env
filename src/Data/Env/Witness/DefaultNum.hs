@@ -1,38 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 {- |
-Module      : Data.Env.Witness.DefaultNum
-Description : Witness type for parsing numeric types with default values
-Copyright   : (c) 2025
-License     : MIT
-Maintainer  : maintainer@example.com
-Stability   : experimental
-
-This module provides the 'DefaultNum' witness type, which allows you to parse
-numeric environment variables with a type-level default value. When the environment
-variable is missing or empty, the default value is used instead.
-
-== Usage Example
-
-@
-import Data.Env.RecordParserW
-import Data.Env.Witness.DefaultNum
-import GHC.Generics
-
-data Config c = Config
-  { port :: Di (DefaultNum 5432) c Int
-  , timeout :: Di (DefaultNum 30) c Int
-  }
-  deriving (Generic)
-
--- When parsing with an empty map, defaults are used:
--- parseRecordW \@(Config 'Dec) mempty
--- => Right (Config 5432 30)
-
--- When values are provided, they override the defaults:
--- parseRecordW \@(Config 'Dec) (fromList [("port", "8080")])
--- => Right (Config 8080 30)
-@
+Witness type for parsing numeric types with type-level default values.
 -}
 module Data.Env.Witness.DefaultNum (
   DefaultNum,

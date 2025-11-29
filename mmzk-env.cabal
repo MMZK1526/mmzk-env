@@ -58,6 +58,7 @@ library
         Data.Env.TypeParser
         Data.Env.TypeParserW
         Data.Env.Witness.DefaultNum
+        Data.Env.Witness.DefaultString
     build-depends:
         base >=4.16 && <5,
         containers >= 0.6.7 && < 0.7,

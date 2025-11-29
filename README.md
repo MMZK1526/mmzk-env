@@ -181,8 +181,9 @@ connectToDatabase cfg = connect $ defaultConnectInfo
 
 ### Available Witnesses
 
-- **`DefaultNum n a`**: Numeric types with a type-level default value `n`
 - **`Solo a`**: Standard parsing without special behaviour (equivalent to `TypeParser`)
+- **`DefaultNum n a`**: Numeric types with a type-level default value `n`
+- - **`DefaultString s a`**: String types with a type-level default value `s`
 - **Custom witnesses**: You can define your own by implementing the `TypeParserW` class
 
 More built-in witnesses will be provided.
