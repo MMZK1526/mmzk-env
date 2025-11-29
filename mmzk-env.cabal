@@ -83,3 +83,39 @@ test-suite test
     build-tool-depends:
         hspec-discover:hspec-discover ^>=2.11
     hs-source-dirs:   test
+
+
+executable quickstart-example
+    main-is:          QuickstartExample.hs
+    build-depends:
+        base >=4.16 && <5,
+        mmzk-env,
+    hs-source-dirs:   app
+    default-language: Haskell2010
+
+
+executable enum-example
+    main-is:          EnumExample.hs
+    build-depends:
+        base >=4.16 && <5,
+        mmzk-env,
+    hs-source-dirs:   app
+    default-language: Haskell2010
+
+executable newtype-example
+    main-is:          NewtypeExample.hs
+    build-depends:
+        base >=4.16 && <5,
+        mmzk-env,
+    hs-source-dirs:   app
+    default-language: Haskell2010
+
+
+executable witness-example
+    main-is:          WitnessExample.hs
+    build-depends:
+        base >=4.16 && <5,
+        containers,
+        mmzk-env,
+    hs-source-dirs:   app
+    default-language: Haskell2010

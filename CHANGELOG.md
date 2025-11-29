@@ -10,7 +10,13 @@
   
 * Add convenient `Maybe` result variants for parsers.
 
-* Add more examples and tests.
+* Add runnable example executables in `app/`:
+  * `quickstart-example`: Basic environment validation example.
+  * `enum-example`: Enumerated type parsing example.
+  * `newtype-example`: Custom parser with newtype wrapper example.
+  * `witness-example`: Witness types with default values example.
+
+* Add more tests.
 
 * Heavy refactoring.
 

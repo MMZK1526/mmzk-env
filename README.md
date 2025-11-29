@@ -6,13 +6,15 @@ ensuring that they conform to the expected types.
 
 ## Quick Start
 
-```Haskell
-module Data.Env where
+**[Full example →](app/QuickstartExample.hs)**
 
-import           Control.Monad.IO.Class
-import           Data.Env.ExtractFields
-import           Data.Env.RecordParser
-import           GHC.Generics
+```Haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
+
+import Data.Env
+import GHC.Generics
 
 -- | Example: Define an environment schema
 data Config = Config
@@ -37,12 +39,15 @@ If any variable is missing or has an incorrect type, the validation will fail, a
 
 ## Enum Support
 
+**[Full example →](app/EnumExample.hs)**
+
 The library also supports automatic parsing of enumerated types. You can define an enum and derive the `TypeParser` instance using the helper type `EnumParser`.
 
 The extension `DerivingVia` is required for this feature.
 
 ```Haskell
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TypeApplications #-}
 
 data Gender = Male | Female
   deriving (Show, Eq, Enum, Bounded)
@@ -58,11 +63,19 @@ The library provides a "witness" pattern that allows you to enhance parsing beha
 
 ### The Problem: Newtype Boilerplate
 
+**[Full example →](app/NewtypeExample.hs)**
+
 Let's say you want to parse a PostgreSQL port that defaults to 5432. Without witnesses, you might create a newtype wrapper:
 
 ```Haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
+
+import Data.Env
 import Data.Env.TypeParser
 import Data.Word
+import GHC.Generics
 
 -- Define a newtype wrapper for the port
 newtype PsqlPort = PsqlPort Word16
@@ -84,6 +97,9 @@ data Config = Config
 Now when you use your config, you have to constantly unwrap the value:
 
 ```Haskell
+unpackPort :: PsqlPort -> Word16
+unpackPort (PsqlPort port) = port
+
 connectToDatabase :: Config -> IO Connection
 connectToDatabase cfg = connect $ defaultConnectInfo
   { connectPort = unpackPort (psqlPort cfg)  -- Annoying unpacking!
@@ -94,10 +110,15 @@ connectToDatabase cfg = connect $ defaultConnectInfo
 
 ### The Solution: Witnesses
 
+**[Full example →](app/WitnessExample.hs)**
+
 With witness types, you can specify parsing behaviour at the type level while keeping the final value unwrapped:
 
 ```Haskell
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -105,9 +126,10 @@ import Data.Env.RecordParserW
 import Data.Env.Witness.DefaultNum
 import Data.Word
 import GHC.Generics
+import Data.Env.TypeParserW
 
 data Config c = Config
-  { psqlPort :: Column c (DefaultNum 5432) Word16  -- Defaults to 5432
+  { psqlPort :: Column c (DefaultNum 5432 Word16) Word16  -- Defaults to 5432
   , dbName   :: Column c (Solo String) String }
   deriving (Generic)
 
