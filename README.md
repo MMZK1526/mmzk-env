@@ -18,7 +18,7 @@ ensuring that they conform to the expected types.
 
 ## Quick Start
 
-**[Full example →](app/QuickstartExample.hs)**
+**[Full example →][quickstart-example]**
 
 ```Haskell
 {-# LANGUAGE DeriveAnyClass #-}
@@ -51,7 +51,7 @@ If any variable is missing or has an incorrect type, the validation will fail, a
 
 ## Enum Support
 
-**[Full example →](app/EnumExample.hs)**
+**[Full example →][enum-example]**
 
 The library also supports automatic parsing of enumerated types. You can define an enum and derive the `TypeParser` instance using the helper type `EnumParser`.
 
@@ -75,7 +75,7 @@ The library provides a "witness" pattern that allows you to enhance parsing beha
 
 ### The Problem: Newtype Boilerplate
 
-**[Full example →](app/NewtypeExample.hs)**
+**[Full example →][newtype-example]**
 
 Let's say you want to parse a PostgreSQL port that defaults to 5432. Without witnesses, you might create a newtype wrapper:
 
@@ -122,7 +122,7 @@ connectToDatabase cfg = connect $ defaultConnectInfo
 
 ### The Solution: Witnesses
 
-**[Full example →](app/WitnessExample.hs)**
+**[Full example →][witness-example]**
 
 With witness types, you can specify parsing behaviour at the type level while keeping the final value unwrapped:
 
@@ -162,7 +162,7 @@ The magic happens with the `Column` type family and the `ColumnType` phantom typ
 - **`Config 'Dec`** (Declaration): The type used for parsing, where each field is `(witness, value)`
   - This works under the hood for the generic instances and users typically don't interact with it directly
 - **`Config 'Res`** (Result): The type you work with, where each field is just `value`
-- **`Column c witness a`**: Expands to `(witness a, a)` when `c = 'Dec`, or just `a` when `c = 'Res`
+- **`Column c witness a`**: Expands to `(witness, a)` when `c = 'Dec`, or just `a` when `c = 'Res`
 
 Now your final config has no wrappers:
 
@@ -188,3 +188,8 @@ connectToDatabase cfg = connect $ defaultConnectInfo
 More built-in witnesses will be provided.
 
 For more complex parsing needs, witnesses provide a way to augment behaviour without polluting your domain types with wrapper noise.
+
+[quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/QuickstartExample.hs
+[enum-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/EnumExample.hs
+[newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/NewtypeExample.hs
+[witness-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/WitnessExample.hs
