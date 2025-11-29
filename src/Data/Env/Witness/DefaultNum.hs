@@ -35,7 +35,7 @@ data Config c = Config
 @
 -}
 module Data.Env.Witness.DefaultNum (
-  DefaultNum (..),
+  DefaultNum,
 ) where
 
 import Data.Env.TypeParser
@@ -61,8 +61,7 @@ import GHC.TypeLits
 --
 -- >>> parseTypeW' (Proxy @(DefaultNum 5432 Int)) "invalid"
 -- Nothing
-newtype DefaultNum (n :: Nat) a = DefaultNum a
-  deriving stock (Show, Eq)
+data DefaultNum (n :: Nat) a
 
 -- | Parse a numeric value with a default fallback.
 --

@@ -49,10 +49,3 @@ instance TypeParser a => TypeParserW (Solo a) a where
 instance (TypeParserW p1 String, TypeParserW p2 String) => TypeParserW (p1, p2) String where
   parseTypeW :: Proxy (p1, p2) -> String -> Either String String
   parseTypeW _ str = parseTypeW @p1 Proxy str >>= parseTypeW @p2 Proxy
-
--- newtype DefaultW a = DefaultW a
---   deriving stock (Show, Eq)
-
--- instance (TypeParser a) => TypeParserW (DefaultW a) a where
---   parseTypeW :: Proxy (DefaultW a) -> String -> Either String a
---   parseTypeW _ = parseType
