@@ -4,6 +4,18 @@ mmzk-env is a library for reading environment variables into a user-defined data
 type. It provides a type-safe way to parse and validate environment variables,
 ensuring that they conform to the expected types.
 
+## Contents
+
+- [mmzk-env](#mmzk-env)
+  - [Contents](#contents)
+  - [Quick Start](#quick-start)
+  - [Enum Support](#enum-support)
+  - [Witness Types: Avoiding Newtype Boilerplate](#witness-types-avoiding-newtype-boilerplate)
+    - [The Problem: Newtype Boilerplate](#the-problem-newtype-boilerplate)
+    - [The Solution: Witnesses](#the-solution-witnesses)
+    - [Key Benefits](#key-benefits)
+    - [Available Witnesses](#available-witnesses)
+
 ## Quick Start
 
 **[Full example →](app/QuickstartExample.hs)**
