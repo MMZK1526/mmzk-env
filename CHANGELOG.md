@@ -1,7 +1,7 @@
 # Revision history for mmzk-env
 
 
-## 0.2.0.0 -- Unreleased
+## 0.2.0.0 -- 2025-11-29
 
 * Witnessed record parsing (witness types carry type-level information that determines parsing behaviour):
   * Add `RecordParserW` for witnessed record parsing.

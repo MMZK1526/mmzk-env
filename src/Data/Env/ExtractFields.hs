@@ -10,7 +10,7 @@
 -- variables based on these field names, with options for different naming
 -- conventions.
 module Data.Env.ExtractFields (
-  ExtractFields,
+  ExtractFields (..),
   extractFields,
   getEnvRaw,
   getEnvRawLowerToUpperSnake,

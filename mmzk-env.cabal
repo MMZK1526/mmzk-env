@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               mmzk-env
-version:            0.1.2.0
+version:            0.2.0.0
 
 synopsis:           Read environment variables into a user-defined data type
 description:
