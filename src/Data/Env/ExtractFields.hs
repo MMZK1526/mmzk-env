@@ -13,7 +13,6 @@ module Data.Env.ExtractFields (
   ExtractFields (..),
   extractFields,
   getEnvRaw,
-  getEnvRawLowerToUpperSnake,
   getEnvRawCamelCaseToUpperSnake,
 ) where
 
@@ -48,13 +47,6 @@ getEnvRaw mapper = liftIO $ M.fromList <$> forM (extractFields @a) \field -> do
   value <- lookupEnv (mapper field)
   return (field, fromMaybe "" value)
 {-# INLINE getEnvRaw #-}
-
--- | Retrieve environment variables based on field names, converting them to
--- upper case.
-getEnvRawLowerToUpperSnake :: forall a m. (MonadIO m, ExtractFields a)
-                           => m (Map String String)
-getEnvRawLowerToUpperSnake = getEnvRaw @a (map toUpper)
-{-# INLINE getEnvRawLowerToUpperSnake #-}
 
 -- | Retrieve environment variables based on field names, converting them from
 -- camel case (record field naming) to upper snake case (environment variable

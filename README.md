@@ -9,6 +9,7 @@ ensuring that they conform to the expected types.
 - [mmzk-env](#mmzk-env)
   - [Contents](#contents)
   - [Quick Start](#quick-start)
+    - [Custom Environment Variable Mapping](#custom-environment-variable-mapping)
   - [Enum Support](#enum-support)
   - [Witness Types: Avoiding Newtype Boilerplate](#witness-types-avoiding-newtype-boilerplate)
     - [The Problem: Newtype Boilerplate](#the-problem-newtype-boilerplate)
@@ -48,6 +49,34 @@ main = do
 With this setup, it requires the environment variables `PORT`, `NAME`, `MAIN_HOST`, and `DEBUG` to be set according to the types defined in the `Config` data type. The library will automatically parse these variables and validate them against the schema.
 
 If any variable is missing or has an incorrect type, the validation will fail, and an error message will be printed.
+
+### Custom Environment Variable Mapping
+
+**[Full example →][custom-mapping-example]**
+
+By default, the library converts camelCase field names to UPPER_SNAKE_CASE (e.g., `mainHost` → `MAIN_HOST`).
+
+If you want to use uppercase environment variable names without underscores (like `MAINHOST` instead of `MAIN_HOST`), you can use `validateEnvWith` (or `validateEnvWWith` for witness types) with a custom mapping function:
+
+```Haskell
+data Config = Config
+    { port      :: Int
+    , name      :: String
+    , main_host :: String  -- Will map to "MAINHOST" with custom mapping
+    , debug     :: Maybe Bool }
+    deriving (Show, Generic, EnvSchema)
+
+main :: IO ()
+main = do
+  errOrEnv <- validateEnvWith @Config (map toUpper)
+  case errOrEnv of
+    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Right cfg -> putStrLn $ "Config loaded successfully: " ++ show cfg
+```
+
+With `validateEnvWith (map toUpper)`, the field `main_host` will look for the environment variable `MAINHOST` instead of `MAIN_HOST`.
+
+You can provide any custom mapping function to `validateEnvWith` to transform field names to environment variable names according to your needs.
 
 ## Enum Support
 
@@ -191,6 +220,7 @@ More built-in witnesses will be provided.
 For more complex parsing needs, witnesses provide a way to augment behaviour without polluting your domain types with wrapper noise.
 
 [quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/QuickstartExample.hs
+[custom-mapping-example]: /app/CustomMappingExample.hs
 [enum-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/EnumExample.hs
 [newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/NewtypeExample.hs
 [witness-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/WitnessExample.hs

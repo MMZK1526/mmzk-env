@@ -3,7 +3,11 @@
 
 ## 0.2.1.0 -- Unreleased
 
-* Add `validateEnvW` and `validateEnvWWith` functions for validating environment variables with witness types. 
+* Add `validateEnvW` and `validateEnvWWith` functions for validating environment variables with witness types.
+
+* Add `DefaultString` witness type for providing default string values.
+
+* Add more examples.
 
 
 ## 0.2.0.0 -- 2025-11-29
