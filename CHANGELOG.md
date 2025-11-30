@@ -7,7 +7,7 @@
 
 * Add `DefaultString` witness type for providing default string values.
 
-* Add more examples.
+* Add more texts and examples.
 
 
 ## 0.2.0.0 -- 2025-11-29
