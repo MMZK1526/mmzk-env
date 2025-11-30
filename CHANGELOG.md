@@ -1,9 +1,9 @@
 # Revision history for mmzk-env
 
 
-## 0.2.1.0 -- Unreleased
+## 0.2.1.0 -- 2025-11-30
 
-* Add `validateEnvW` and `validateEnvWWith` functions for validating environment variables with witness types.
+* Add the missing `validateEnvW` and `validateEnvWWith` functions for validating environment variables with witness types.
 
 * Add `DefaultString` witness type for providing default string values.
 

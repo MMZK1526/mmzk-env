@@ -219,8 +219,8 @@ More built-in witnesses will be provided.
 
 For more complex parsing needs, witnesses provide a way to augment behaviour without polluting your domain types with wrapper noise.
 
-[quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/QuickstartExample.hs
-[custom-mapping-example]: /app/CustomMappingExample.hs
-[enum-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/EnumExample.hs
-[newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/NewtypeExample.hs
-[witness-example]: https://github.com/MMZK1526/mmzk-env/blob/3a47eb279985a08442433f7484bc3af11d025904/app/WitnessExample.hs
+[quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/QuickstartExample.hs
+[custom-mapping-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/CustomMappingExample.hs
+[enum-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/EnumExample.hs
+[newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/NewtypeExample.hs
+[witness-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/WitnessExample.hs
