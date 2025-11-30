@@ -1,5 +1,13 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
+-- |
+-- Module: Data.Env.TypeParserW
+-- Description: Type class provides parsers for types parameterized by witness types.
+--
+-- This module provides the 'TypeParserW' type class, which allows parsing
+-- environment variables using witness types to control parsing behavior.
+-- This enables multiple parsing strategies for the same type by using
+-- different witness types.
 module Data.Env.TypeParserW (
   TypeParserW (..),
   Solo,
@@ -29,7 +37,7 @@ import Data.Tuple ( Solo )
 class TypeParserW p a | p -> a where
   -- | Parse a value by its string representation using the witness type @p@.
   --
-  -- The 'Proxy' parameter carries the witness type information that determines
+  -- The 'Data.Proxy.Proxy' parameter carries the witness type information that determines
   -- how the parsing should be performed.
   parseTypeW :: Proxy p -> String -> Either String a
 

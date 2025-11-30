@@ -82,14 +82,14 @@ class GRecordParserW f where
 
   gParseRecord :: Map String String -> Either String ((GRecordParsedType f) r)
 
--- | Handle metadata (wrapping fields in `M1`)
+-- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParserW f => GRecordParserW (M1 D c f) where
   type GRecordParsedType (M1 D c f) = M1 D c (GRecordParsedType f)
 
   gParseRecord :: Map String String -> Either String (GRecordParsedType (M1 D c f) r)
   gParseRecord env = M1 <$> gParseRecord @f env
 
--- | Handle metadata (wrapping fields in `M1`)
+-- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParserW f => GRecordParserW (M1 C c f) where
   type GRecordParsedType (M1 C c f) = M1 C c (GRecordParsedType f)
 

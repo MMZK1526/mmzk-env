@@ -28,7 +28,7 @@ import System.Environment
 
 -- | Type class for extracting field names from a record type.
 class ExtractFields a where
-  -- | Extract field names from a record type. It uses a 'Proxy' to avoid
+  -- | Extract field names from a record type. It uses a 'Data.Proxy.Proxy' to avoid
   -- needing a value of type $a$, and we recommend using 'extractFields'
   -- instead.
   extractFields' :: Proxy a -> [String]

@@ -46,12 +46,12 @@ instance (Generic a, GRecordParser (Rep a)) => RecordParser a where
 class GRecordParser f where
   gParseRecord :: Map String String -> Either String (f p)
 
--- | Handle metadata (wrapping fields in `M1`)
+-- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParser f => GRecordParser (M1 D c f) where
   gParseRecord :: Map String String -> Either String (M1 D c f p)
   gParseRecord env = M1 <$> gParseRecord env
 
--- | Handle metadata (wrapping fields in `M1`)
+-- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParser f => GRecordParser (M1 C c f) where
   gParseRecord :: Map String String -> Either String (M1 C c f p)
   gParseRecord env = M1 <$> gParseRecord env
