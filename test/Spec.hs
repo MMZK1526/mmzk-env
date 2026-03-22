@@ -1,4 +1,5 @@
 import           Data.Either (isLeft)
+import           Data.Env.DefaultBool
 import           Data.Env.EnumParser
 import           Data.Env.RecordParser
 import           Data.Env.TypeParser
@@ -147,6 +148,21 @@ typeParserSpecSpec = describe "parseType" do
       parseType @Word (show ((fromIntegral (maxBound :: Word) :: Integer) + 1)) `shouldSatisfy` isLeft
       parseType @Word "-1" `shouldSatisfy` isLeft
       parseType @Word "1.0" `shouldSatisfy` isLeft
+  describe "parse DefaultBool" do
+    it "parses True" do
+      parseType @(DefaultBool 'False) "True" `shouldBe` Right (DefaultBool True)
+      parseType @(DefaultBool 'True)  "True" `shouldBe` Right (DefaultBool True)
+    it "parses False" do
+      parseType @(DefaultBool 'False) "False" `shouldBe` Right (DefaultBool False)
+      parseType @(DefaultBool 'True)  "False" `shouldBe` Right (DefaultBool False)
+    it "defaults to False when empty" do
+      parseType @(DefaultBool 'False) "" `shouldBe` Right (DefaultBool False)
+    it "defaults to True when empty" do
+      parseType @(DefaultBool 'True) "" `shouldBe` Right (DefaultBool True)
+    it "fails to parse other values" do
+      parseType @(DefaultBool 'False) "1"     `shouldSatisfy` isLeft
+      parseType @(DefaultBool 'False) "true"  `shouldSatisfy` isLeft
+      parseType @(DefaultBool 'False) "false" `shouldSatisfy` isLeft
   describe "parse Maybe" do
     it "should success" do
       parseType @(Maybe Int) "1" `shouldBe` Right (Just 1)

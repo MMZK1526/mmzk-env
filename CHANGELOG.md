@@ -1,6 +1,12 @@
 # Revision history for mmzk-env
 
 
+## 0.1.2.1 -- 2026-03-22
+
+* Added `DefaultBool` for `Bool` fields with a type-level default value.
+* Added `DataKinds` to default extensions.
+
+
 ## 0.1.2.0 -- 2025-11-16
 
 * Add spport for parsing `Text`.
