@@ -1,6 +1,14 @@
 # Revision history for mmzk-env
 
 
+## 0.3.0.0 -- 2026-03-22
+
+* Fixed `DefaultBool` to follow the proper witness pattern:
+  * Changed from a newtype with `TypeParser` to a phantom type with `TypeParserW`.
+  * Added second type parameter (consistent with `DefaultNum` and `DefaultString`) enabling use with the `Di` type alias.
+* `DefaultBool` now accepts `True`, `False`, `true`, `false`, `T`, `F`, `t`, `f`, `1`, `0`.
+
+
 ## 0.2.1.1 -- 2026-03-22
 
 * Added `DefaultBool` for `Bool` fields with a type-level default value.
