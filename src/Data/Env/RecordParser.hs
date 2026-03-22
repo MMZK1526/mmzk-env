@@ -12,15 +12,24 @@ module Data.Env.RecordParser (
   RecordParser (..),
 ) where
 
-import           Data.Env.TypeParser
-import           Data.Map (Map)
-import           GHC.Generics
-import qualified Data.Map as M
-import           Data.Maybe
+import Data.Env.TypeParser
+import Data.Map ( Map )
+import Data.Map qualified as M
+import Data.Maybe
+import GHC.Generics
 
 -- | Type class for validating environment schemas.
 class RecordParser a where
   parseRecord :: Map String String -> Either String a
+
+  -- | Parse a record, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseRecord' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseRecord' :: Map String String -> Maybe a
+  parseRecord' env = case parseRecord env of
+    Right val -> Just val
+    Left _    -> Nothing
 
 instance (Generic a, GRecordParser (Rep a)) => RecordParser a where
 
@@ -37,12 +46,12 @@ instance (Generic a, GRecordParser (Rep a)) => RecordParser a where
 class GRecordParser f where
   gParseRecord :: Map String String -> Either String (f p)
 
--- | Handle metadata (wrapping fields in `M1`)
+-- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParser f => GRecordParser (M1 D c f) where
   gParseRecord :: Map String String -> Either String (M1 D c f p)
   gParseRecord env = M1 <$> gParseRecord env
 
--- | Handle metadata (wrapping fields in `M1`)
+-- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParser f => GRecordParser (M1 C c f) where
   gParseRecord :: Map String String -> Either String (M1 C c f p)
   gParseRecord env = M1 <$> gParseRecord env

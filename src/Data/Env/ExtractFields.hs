@@ -10,27 +10,25 @@
 -- variables based on these field names, with options for different naming
 -- conventions.
 module Data.Env.ExtractFields (
-  ExtractFields,
+  ExtractFields (..),
   extractFields,
   getEnvRaw,
-  getEnvRawLowerToUpperSnake,
   getEnvRawCamelCaseToUpperSnake,
 ) where
 
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Data.Char
-
-import           Data.Maybe
-import           Data.Map (Map)
-import           Data.Proxy
-import           GHC.Generics
-import qualified Data.Map as M
-import           System.Environment
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.Char
+import Data.Map ( Map )
+import Data.Map qualified as M
+import Data.Maybe
+import Data.Proxy
+import GHC.Generics
+import System.Environment
 
 -- | Type class for extracting field names from a record type.
 class ExtractFields a where
-  -- | Extract field names from a record type. It uses a 'Proxy' to avoid
+  -- | Extract field names from a record type. It uses a 'Data.Proxy.Proxy' to avoid
   -- needing a value of type $a$, and we recommend using 'extractFields'
   -- instead.
   extractFields' :: Proxy a -> [String]
@@ -49,13 +47,6 @@ getEnvRaw mapper = liftIO $ M.fromList <$> forM (extractFields @a) \field -> do
   value <- lookupEnv (mapper field)
   return (field, fromMaybe "" value)
 {-# INLINE getEnvRaw #-}
-
--- | Retrieve environment variables based on field names, converting them to
--- upper case.
-getEnvRawLowerToUpperSnake :: forall a m. (MonadIO m, ExtractFields a)
-                           => m (Map String String)
-getEnvRawLowerToUpperSnake = getEnvRaw @a (map toUpper)
-{-# INLINE getEnvRawLowerToUpperSnake #-}
 
 -- | Retrieve environment variables based on field names, converting them from
 -- camel case (record field naming) to upper snake case (environment variable

@@ -1,15 +1,44 @@
 # Revision history for mmzk-env
 
 
-## 0.1.2.1 -- 2026-03-22
+## 0.2.1.1 -- 2026-03-22
 
 * Added `DefaultBool` for `Bool` fields with a type-level default value.
 * Added `DataKinds` to default extensions.
 
 
+## 0.2.1.0 -- 2025-11-30
+
+* Add the missing `validateEnvW` and `validateEnvWWith` functions for validating environment variables with witness types.
+
+* Add `DefaultString` witness type for providing default string values.
+
+* Add more texts and examples.
+
+
+## 0.2.0.0 -- 2025-11-29
+
+* Witnessed record parsing (witness types carry type-level information that determines parsing behaviour):
+  * Add `RecordParserW` for witnessed record parsing.
+  * Add `TypeParserW` for witnessed type parsing.
+  * Add `DefaultNum` witness type for providing default numeric values.
+
+* Add convenient `Maybe` result variants for parsers.
+
+* Add runnable example executables in `app/`:
+  * `quickstart-example`: Basic environment validation example.
+  * `enum-example`: Enumerated type parsing example.
+  * `newtype-example`: Custom parser with newtype wrapper example.
+  * `witness-example`: Witness types with default values example.
+
+* Add more tests.
+
+* Heavy refactoring.
+
+
 ## 0.1.2.0 -- 2025-11-16
 
-* Add spport for parsing `Text`.
+* Add support for parsing `Text`.
 
 
 ## 0.1.1.1 -- 2025-09-29

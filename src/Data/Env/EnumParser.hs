@@ -18,13 +18,14 @@
 -- > parseType @Gender "Other" `shouldSatisfy` isLeft
 module Data.Env.EnumParser where
 
-import           Data.Env.TypeParser (TypeParser(..))
+import Data.Env.TypeParser ( TypeParser(..) )
 
 -- | A helper type for parsing Bounded Enums.
 newtype EnumParser a = EnumParser a
   deriving (Show, Eq)
 
 instance (Enum a, Show a, Bounded a) => TypeParser (EnumParser a) where
+  parseType :: (Enum a, Show a, Bounded a) => String -> Either String (EnumParser a)
   parseType s = case lookup s enumMap of
     Just v  -> Right (EnumParser v)
     Nothing -> Left $ "Cannot parse value: " ++ s ++ ". Valid values are: " ++ show (map fst enumMap)

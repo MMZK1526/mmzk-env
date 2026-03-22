@@ -1,6 +1,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE CPP #-}
 
 -- |
 -- Module: Data.Env.TypeParser
@@ -13,18 +13,19 @@ module Data.Env.TypeParser (
   TypeParser (..),
 ) where
 
-import           Data.Int (Int8, Int16, Int32, Int64)
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
-import           Data.Word (Word8, Word16, Word32, Word64)
-import           GHC.Generics
-import qualified Text.Gigaparsec as P
-import qualified Text.Gigaparsec.Char as P
-import qualified Text.Gigaparsec.Combinator as P
-import qualified Text.Gigaparsec.Errors.ErrorGen as P
-import qualified Text.Gigaparsec.Errors.Combinator as P
-import qualified Text.Gigaparsec.Token.Descriptions as L
-import qualified Text.Gigaparsec.Token.Lexer as L
+import Data.Int (Int8, Int16, Int32, Int64)
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as TL
+import Data.Tuple ( Solo(..) )
+import Data.Word (Word8, Word16, Word32, Word64)
+import GHC.Generics
+import Text.Gigaparsec qualified as P
+import Text.Gigaparsec.Char qualified as P
+import Text.Gigaparsec.Combinator qualified as P
+import Text.Gigaparsec.Errors.ErrorGen qualified as P
+import Text.Gigaparsec.Errors.Combinator qualified as P
+import Text.Gigaparsec.Token.Descriptions qualified as L
+import Text.Gigaparsec.Token.Lexer qualified as L
 
 -- | Type class for parsers associated with types.
 class TypeParser a where
@@ -35,6 +36,16 @@ class TypeParser a where
     :: (Generic a, GTypeParser (Rep a)) => String -> Either String a
   parseType s = to <$> gTypeParser s
   {-# INLINE parseType #-}
+
+  -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseType' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseType' :: String -> Maybe a
+  parseType' str = case parseType str of
+    Right val -> Just val
+    Left _    -> Nothing
+  {-# INLINE parseType' #-}
 
 -- | Required (non-empty) String field.
 --
@@ -146,6 +157,16 @@ instance TypeParser TL.Text where
 instance TypeParser () where
   parseType :: String -> Either String ()
   parseType = parse (P.string "()" P.$> ())
+  {-# INLINE parseType #-}
+
+-- | Solo fields isomorphic to the original (@Solo a@).
+instance TypeParser a => TypeParser (Solo a) where
+  parseType :: String -> Either String (Solo a)
+#if MIN_VERSION_base(4,18,0)
+  parseType s = MkSolo <$> parseType s
+#else
+  parseType s = Solo <$> parseType s
+#endif
   {-# INLINE parseType #-}
 
 -- | Optional fields (@Maybe a@).

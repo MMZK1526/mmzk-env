@@ -1,0 +1,59 @@
+{-# LANGUAGE FunctionalDependencies #-}
+
+-- |
+-- Module: Data.Env.TypeParserW
+-- Description: Type class provides parsers for types parameterized by witness types.
+--
+-- This module provides the 'TypeParserW' type class, which allows parsing
+-- environment variables using witness types to control parsing behavior.
+-- This enables multiple parsing strategies for the same type by using
+-- different witness types.
+module Data.Env.TypeParserW (
+  TypeParserW (..),
+  Solo,
+) where
+
+import Data.Env.TypeParser
+import Data.Proxy ( Proxy(..) )
+import Data.Tuple ( Solo )
+
+-- | Type class for parsers parameterized by a witness type.
+--
+-- This is similar to 'Data.Env.TypeParser.TypeParser''s 'Data.Env.TypeParser.parseType',
+-- but allows a witness object to define how to parse. The witness type @p@ determines
+-- the parsing strategy, giving you explicit control over the parsing behavior.
+--
+-- The witness pattern is useful when:
+--
+-- * You need multiple different parsing strategies for the same type
+-- * [TODO] You want to compose parsers in different ways
+--
+-- The functional dependency @p -> a@ ensures that each witness type uniquely
+-- determines the result type. For example, 'Data.Env.Witness.DefaultNum.DefaultNum' 5432 Int
+-- uniquely determines the result type as Int.
+--
+-- See 'Data.Env.Witness.DefaultNum.DefaultNum' for an example of how to use witness types with
+-- this class.
+class TypeParserW p a | p -> a where
+  -- | Parse a value by its string representation using the witness type @p@.
+  --
+  -- The 'Data.Proxy.Proxy' parameter carries the witness type information that determines
+  -- how the parsing should be performed.
+  parseTypeW :: Proxy p -> String -> Either String a
+
+  -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
+  --
+  -- This is a convenience function that calls 'parseTypeW' and converts the result
+  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  parseTypeW' :: Proxy p -> String -> Maybe a
+  parseTypeW' proxy str = case parseTypeW proxy str of
+    Right val -> Just val
+    Left _    -> Nothing
+
+instance TypeParser a => TypeParserW (Solo a) a where
+  parseTypeW :: Proxy (Solo a) -> String -> Either String a
+  parseTypeW _ = parseType
+
+instance (TypeParserW p1 String, TypeParserW p2 String) => TypeParserW (p1, p2) String where
+  parseTypeW :: Proxy (p1, p2) -> String -> Either String String
+  parseTypeW _ str = parseTypeW @p1 Proxy str >>= parseTypeW @p2 Proxy

@@ -4,15 +4,30 @@ mmzk-env is a library for reading environment variables into a user-defined data
 type. It provides a type-safe way to parse and validate environment variables,
 ensuring that they conform to the expected types.
 
+## Contents
+
+- [mmzk-env](#mmzk-env)
+  - [Contents](#contents)
+  - [Quick Start](#quick-start)
+    - [Custom Environment Variable Mapping](#custom-environment-variable-mapping)
+  - [Enum Support](#enum-support)
+  - [Witness Types: Avoiding Newtype Boilerplate](#witness-types-avoiding-newtype-boilerplate)
+    - [The Problem: Newtype Boilerplate](#the-problem-newtype-boilerplate)
+    - [The Solution: Witnesses](#the-solution-witnesses)
+    - [Key Benefits](#key-benefits)
+    - [Available Witnesses](#available-witnesses)
+
 ## Quick Start
 
-```Haskell
-module Data.Env where
+**[Full example →][quickstart-example]**
 
-import           Control.Monad.IO.Class
-import           Data.Env.ExtractFields
-import           Data.Env.RecordParser
-import           GHC.Generics
+```Haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
+
+import Data.Env
+import GHC.Generics
 
 -- | Example: Define an environment schema
 data Config = Config
@@ -35,7 +50,37 @@ With this setup, it requires the environment variables `PORT`, `NAME`, `MAIN_HOS
 
 If any variable is missing or has an incorrect type, the validation will fail, and an error message will be printed.
 
+### Custom Environment Variable Mapping
+
+**[Full example →][custom-mapping-example]**
+
+By default, the library converts camelCase field names to UPPER_SNAKE_CASE (e.g., `mainHost` → `MAIN_HOST`).
+
+If you want to use uppercase environment variable names without underscores (like `MAINHOST` instead of `MAIN_HOST`), you can use `validateEnvWith` (or `validateEnvWWith` for witness types) with a custom mapping function:
+
+```Haskell
+data Config = Config
+    { port      :: Int
+    , name      :: String
+    , main_host :: String  -- Will map to "MAINHOST" with custom mapping
+    , debug     :: Maybe Bool }
+    deriving (Show, Generic, EnvSchema)
+
+main :: IO ()
+main = do
+  errOrEnv <- validateEnvWith @Config (map toUpper)
+  case errOrEnv of
+    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Right cfg -> putStrLn $ "Config loaded successfully: " ++ show cfg
+```
+
+With `validateEnvWith (map toUpper)`, the field `main_host` will look for the environment variable `MAINHOST` instead of `MAIN_HOST`.
+
+You can provide any custom mapping function to `validateEnvWith` to transform field names to environment variable names according to your needs.
+
 ## Enum Support
+
+**[Full example →][enum-example]**
 
 The library also supports automatic parsing of enumerated types. You can define an enum and derive the `TypeParser` instance using the helper type `EnumParser`.
 
@@ -43,6 +88,7 @@ The extension `DerivingVia` is required for this feature.
 
 ```Haskell
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TypeApplications #-}
 
 data Gender = Male | Female
   deriving (Show, Eq, Enum, Bounded)
@@ -51,3 +97,130 @@ data Gender = Male | Female
 print $ parseEnum @Gender "Male"   -- Right Male
 print $ parseEnum @Gender "Female" -- Right Female
 ```
+
+## Witness Types: Avoiding Newtype Boilerplate
+
+The library provides a "witness" pattern that allows you to enhance parsing behaviour without wrapping values in newtypes. This is useful when you need features like default values, validation, or transformation but want to keep your final data types simple.
+
+### The Problem: Newtype Boilerplate
+
+**[Full example →][newtype-example]**
+
+Let's say you want to parse a PostgreSQL port that defaults to 5432. Without witnesses, you might create a newtype wrapper:
+
+```Haskell
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
+
+import Data.Env
+import Data.Env.TypeParser
+import Data.Word
+import GHC.Generics
+
+-- Define a newtype wrapper for the port
+newtype PsqlPort = PsqlPort Word16
+  deriving (Show, Eq)
+
+-- Implement custom parsing with default value
+instance TypeParser PsqlPort where
+  parseType "" = Right (PsqlPort 5432)  -- Default to 5432
+  parseType str = case parseType str of
+    Right port -> Right (PsqlPort port)
+    Left err   -> Left err
+
+data Config = Config
+  { psqlPort :: PsqlPort
+  , dbName   :: String }
+  deriving (Show, Generic, EnvSchema)
+```
+
+Now when you use your config, you have to constantly unwrap the value:
+
+```Haskell
+unpackPort :: PsqlPort -> Word16
+unpackPort (PsqlPort port) = port
+
+connectToDatabase :: Config -> IO Connection
+connectToDatabase cfg = connect $ defaultConnectInfo
+  { connectPort = unpackPort (psqlPort cfg)  -- Annoying unpacking!
+  , connectDatabase = dbName cfg }
+  where
+    unpackPort (PsqlPort port) = port
+```
+
+### The Solution: Witnesses
+
+**[Full example →][witness-example]**
+
+With witness types, you can specify parsing behaviour at the type level while keeping the final value unwrapped:
+
+```Haskell
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+
+import Data.Env
+import Data.Env.Witness.DefaultNum
+import Data.Word
+import GHC.Generics
+import Data.Env.TypeParserW
+
+data Config c = Config
+  { psqlPort :: Column c (DefaultNum 5432 Word16) Word16  -- Defaults to 5432
+  , dbName   :: Column c (Solo String) String }
+  deriving (Generic, EnvSchemaW)
+
+instance EnvSchemaW (Config \'Dec)
+deriving stock instance Show (Config 'Res)  -- For printing the result
+
+-- Validate environment variables with defaults
+main :: IO ()
+main = do
+  errOrConfig <- validateEnvW @(Config 'Dec)
+  case errOrConfig of
+    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Right cfg -> connectToDatabase cfg  -- cfg :: Config 'Res
+```
+
+The magic happens with the `Column` type family and the `ColumnType` phantom type:
+
+- **`Config 'Dec`** (Declaration): The type used for parsing, where each field is `(witness, value)`
+  - This works under the hood for the generic instances and users typically don't interact with it directly
+- **`Config 'Res`** (Result): The type you work with, where each field is just `value`
+- **`Column c witness a`**: Expands to `(witness, a)` when `c = 'Dec`, or just `a` when `c = 'Res`
+
+Now your final config has no wrappers:
+
+```Haskell
+connectToDatabase :: Config 'Res -> IO Connection
+connectToDatabase cfg = connect $ defaultConnectInfo
+  { connectPort = psqlPort cfg  -- Direct access to Word16!
+  , connectDatabase = dbName cfg }
+```
+
+### Key Benefits
+
+1. **No Unpacking**: Your final data type contains raw values (Word16, String, etc.), not newtypes
+2. **Type-Level Defaults**: Default values are specified in the type signature using type-level naturals
+3. **Flexible Parsing**: Different witness types provide different parsing strategies (defaults, validation, transformation)
+
+### Available Witnesses
+
+- **`Solo a`**: Standard parsing without special behaviour (equivalent to `TypeParser`)
+- **`DefaultNum n a`**: Numeric types with a type-level default value `n`
+- - **`DefaultString s a`**: String types with a type-level default value `s`
+- **Custom witnesses**: You can define your own by implementing the `TypeParserW` class
+
+More built-in witnesses will be provided.
+
+For more complex parsing needs, witnesses provide a way to augment behaviour without polluting your domain types with wrapper noise.
+
+[quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/QuickstartExample.hs
+[custom-mapping-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/CustomMappingExample.hs
+[enum-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/EnumExample.hs
+[newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/NewtypeExample.hs
+[witness-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/WitnessExample.hs
