@@ -51,13 +51,13 @@ library
     import:           settings
     exposed-modules:
         Data.Env
-        Data.Env.DefaultBool
         Data.Env.EnumParser
         Data.Env.ExtractFields
         Data.Env.RecordParser
         Data.Env.RecordParserW
         Data.Env.TypeParser
         Data.Env.TypeParserW
+        Data.Env.Witness.DefaultBool
         Data.Env.Witness.DefaultNum
         Data.Env.Witness.DefaultString
     build-depends:
