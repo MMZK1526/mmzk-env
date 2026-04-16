@@ -41,6 +41,16 @@ class TypeParserW p a | p -> a where
   -- how the parsing should be performed.
   parseTypeW :: Proxy p -> String -> Either String a
 
+  -- | Result to use when the environment variable is absent (empty string).
+  --
+  -- The default calls @'parseTypeW' proxy ""@, which is correct for witnesses
+  -- that supply their own default (e.g. 'DefaultNum', 'DefaultString',
+  -- 'DefaultBool'). Override this for witnesses that delegate to a
+  -- 'TypeParser' instance — see the 'Solo' instance below.
+  parseMissingW :: Proxy p -> Either String a
+  parseMissingW proxy = parseTypeW proxy ""
+  {-# INLINE parseMissingW #-}
+
   -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
   --
   -- This is a convenience function that calls 'parseTypeW' and converts the result
@@ -53,6 +63,11 @@ class TypeParserW p a | p -> a where
 instance TypeParser a => TypeParserW (Solo a) a where
   parseTypeW :: Proxy (Solo a) -> String -> Either String a
   parseTypeW _ = parseType
+
+  -- | Delegates to 'parseMissing' from 'TypeParser', so a 'Solo' field
+  -- with no default behaves the same as a plain 'TypeParser' field.
+  parseMissingW :: Proxy (Solo a) -> Either String a
+  parseMissingW _ = parseMissing @a
 
 instance (TypeParserW p1 String, TypeParserW p2 String) => TypeParserW (p1, p2) String where
   parseTypeW :: Proxy (p1, p2) -> String -> Either String String

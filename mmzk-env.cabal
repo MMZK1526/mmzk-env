@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               mmzk-env
-version:            0.3.0.0
+version:            0.4.0.0
 
 synopsis:           Read environment variables into a user-defined data type
 description:
@@ -11,8 +11,8 @@ description:
 homepage:           https://github.com/MMZK1526/mmzk-env
 bug-reports:        https://github.com/MMZK1526/mmzk-env/issues
 license:            MIT
-author:             Yitang Chen <mmzk1526@outlook.com>
-maintainer:         Yitang Chen <mmzk1526@outlook.com>
+author:             MMZK1526
+maintainer:         MMZK1526
 category:           Data, Environment
 extra-source-files:
     CHANGELOG.md
@@ -53,6 +53,7 @@ library
         Data.Env
         Data.Env.EnumParser
         Data.Env.ExtractFields
+        Data.Env.ParseError
         Data.Env.RecordParser
         Data.Env.RecordParserW
         Data.Env.TypeParser
@@ -94,6 +95,7 @@ executable quickstart-example
     main-is:          QuickstartExample.hs
     build-depends:
         base >=4.16 && <5,
+        containers,
         mmzk-env,
     hs-source-dirs:   app
     default-language: Haskell2010
@@ -120,6 +122,7 @@ executable newtype-example
     main-is:          NewtypeExample.hs
     build-depends:
         base >=4.16 && <5,
+        containers,
         mmzk-env,
     hs-source-dirs:   app
     default-language: Haskell2010

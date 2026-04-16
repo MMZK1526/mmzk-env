@@ -14,6 +14,7 @@ module Data.Env.TypeParser (
 ) where
 
 import Data.Int (Int8, Int16, Int32, Int64)
+import Data.Set qualified as Set
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Tuple ( Solo(..) )
@@ -29,7 +30,7 @@ import Text.Gigaparsec.Token.Lexer qualified as L
 
 -- | Type class for parsers associated with types.
 class TypeParser a where
-  -- | parse a value by its string representation.
+  -- | Parse a value by its string representation.
   parseType :: String -> Either String a
 
   default parseType
@@ -37,10 +38,16 @@ class TypeParser a where
   parseType s = to <$> gTypeParser s
   {-# INLINE parseType #-}
 
-  -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
+  -- | Result to use when the environment variable is absent (empty string).
   --
-  -- This is a convenience function that calls 'parseType' and converts the result
-  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  -- The default signals that the variable is required. Override this for
+  -- types that have a meaningful absence value, e.g. 'Maybe' returns
+  -- 'Right' 'Nothing'.
+  parseMissing :: Either String a
+  parseMissing = Left "missing required environment variable"
+  {-# INLINE parseMissing #-}
+
+  -- | Parse a value, converting 'Either' to 'Maybe' and dropping any error messages.
   parseType' :: String -> Maybe a
   parseType' str = case parseType str of
     Right val -> Just val
@@ -49,105 +56,111 @@ class TypeParser a where
 
 -- | Required (non-empty) String field.
 --
--- in POSIX systems, an empty env variable is equivalent to an undefined env
+-- In POSIX systems, an empty env variable is equivalent to an undefined env
 -- variable. To ensure consistency across platforms, we require that all
 -- environment variables are non-empty.
 instance TypeParser String where
   parseType :: String -> Either String String
-  parseType = parse (P.some P.item)
+  parseType = parse (P.label (Set.singleton "a non-empty string") (P.some P.item))
   {-# INLINE parseType #-}
 
 -- | Required @Integer@ field (parsed from String).
 instance TypeParser Integer where
   parseType :: String -> Either String Integer
-  parseType = parse (L.decimal integerParser)
+  parseType = parse (P.label (Set.singleton "an integer") (L.decimal integerParser))
   {-# INLINE parseType #-}
 
 -- | Required @Int@ field (parsed from String).
 instance TypeParser Int where
   parseType :: String -> Either String Int
   parseType = (fromInteger <$>) . parse do
-      P.filterSWith (simpleErrorGen "Int out of bound")
-                    validateInt
-                    (L.decimal integerParser)
+      P.filterSWith (simpleErrorGen boundsMsg) validateInt
+        $ P.label (Set.singleton "an integer") (L.decimal integerParser)
     where
       validateInt n = n >= fromIntegral @Int minBound
                    && n <= fromIntegral @Int maxBound
+      boundsMsg = "integer out of range for Int (valid: "
+               ++ show (minBound :: Int) ++ " to " ++ show (maxBound :: Int) ++ ")"
   {-# INLINE parseType #-}
 
 -- | Required @Word@ field (parsed from String).
 instance TypeParser Word where
   parseType :: String -> Either String Word
   parseType = (fromInteger <$>) . parse do
-      P.filterSWith (simpleErrorGen "Word out of bound")
-                    validateWord
-                    (L.decimal naturalParser)
+      P.filterSWith (simpleErrorGen boundsMsg) validateWord
+        $ P.label (Set.singleton "a natural number") (L.decimal naturalParser)
     where
       validateWord n = n <= fromIntegral @Word maxBound
+      boundsMsg = "natural number out of range for Word (valid: 0 to "
+               ++ show (maxBound :: Word) ++ ")"
   {-# INLINE parseType #-}
 
 -- | Required @Bool@ field (parsed from String).
+--
+-- Accepts only @True@ or @False@ (case-sensitive). For a more lenient
+-- boolean parser (accepting @true@, @1@, @t@, etc.) use the @DefaultBool@
+-- witness.
 instance TypeParser Bool where
   parseType :: String -> Either String Bool
-  parseType = parse do
-    P.choice [P.string "True" P.$> True, P.string "False" P.$> False]
+  parseType = parse $ P.label (Set.fromList ["True", "False"])
+    $ P.choice [P.string "True" P.$> True, P.string "False" P.$> False]
   {-# INLINE parseType #-}
 
 -- | Required @Int8@ field (parsed from String).
 instance TypeParser Int8 where
   parseType :: String -> Either String Int8
-  parseType = parse (L.decimal8 integerParser)
+  parseType = parse (P.label (Set.singleton "an integer") (L.decimal8 integerParser))
   {-# INLINE parseType #-}
 
 -- | Required @Int16@ field (parsed from String).
 instance TypeParser Int16 where
   parseType :: String -> Either String Int16
-  parseType = parse (L.decimal16 integerParser)
+  parseType = parse (P.label (Set.singleton "an integer") (L.decimal16 integerParser))
   {-# INLINE parseType #-}
 
 -- | Required @Int32@ field (parsed from String).
 instance TypeParser Int32 where
   parseType :: String -> Either String Int32
-  parseType = parse (L.decimal32 integerParser)
+  parseType = parse (P.label (Set.singleton "an integer") (L.decimal32 integerParser))
   {-# INLINE parseType #-}
 
 -- | Required @Int64@ field (parsed from String).
 instance TypeParser Int64 where
   parseType :: String -> Either String Int64
-  parseType = parse (L.decimal64 integerParser)
+  parseType = parse (P.label (Set.singleton "an integer") (L.decimal64 integerParser))
   {-# INLINE parseType #-}
 
 -- | Required @Word8@ field (parsed from String).
 instance TypeParser Word8 where
   parseType :: String -> Either String Word8
-  parseType = parse (L.decimal8 naturalParser)
+  parseType = parse (P.label (Set.singleton "a natural number") (L.decimal8 naturalParser))
   {-# INLINE parseType #-}
 
 -- | Required @Word16@ field (parsed from String).
 instance TypeParser Word16 where
   parseType :: String -> Either String Word16
-  parseType = parse (L.decimal16 naturalParser)
+  parseType = parse (P.label (Set.singleton "a natural number") (L.decimal16 naturalParser))
   {-# INLINE parseType #-}
 
 -- | Required @Word32@ field (parsed from String).
 instance TypeParser Word32 where
   parseType :: String -> Either String Word32
-  parseType = parse (L.decimal32 naturalParser)
+  parseType = parse (P.label (Set.singleton "a natural number") (L.decimal32 naturalParser))
   {-# INLINE parseType #-}
 
 -- | Required @Word64@ field (parsed from String).
 instance TypeParser Word64 where
   parseType :: String -> Either String Word64
-  parseType = parse (L.decimal64 naturalParser)
+  parseType = parse (P.label (Set.singleton "a natural number") (L.decimal64 naturalParser))
   {-# INLINE parseType #-}
 
--- | Required strict @Text@ field (parsed from String)
+-- | Required strict @Text@ field (parsed from String).
 instance TypeParser T.Text where
   parseType :: String -> Either String T.Text
   parseType = fmap T.pack . parseType
   {-# INLINE parseType #-}
 
--- | Required lazy @Text@ field (parsed from String)
+-- | Required lazy @Text@ field (parsed from String).
 instance TypeParser TL.Text where
   parseType :: String -> Either String TL.Text
   parseType = fmap TL.pack . parseType
@@ -156,7 +169,7 @@ instance TypeParser TL.Text where
 -- | Required @()@ field (parsed from String).
 instance TypeParser () where
   parseType :: String -> Either String ()
-  parseType = parse (P.string "()" P.$> ())
+  parseType = parse (P.label (Set.singleton "\"()\"") (P.string "()" P.$> ()))
   {-# INLINE parseType #-}
 
 -- | Solo fields isomorphic to the original (@Solo a@).
@@ -170,7 +183,14 @@ instance TypeParser a => TypeParser (Solo a) where
   {-# INLINE parseType #-}
 
 -- | Optional fields (@Maybe a@).
+--
+-- An absent (empty) value maps to 'Nothing'; a non-empty value is parsed
+-- by the inner 'TypeParser'.
 instance TypeParser a => TypeParser (Maybe a) where
+  -- | An absent optional field is 'Nothing', not an error.
+  parseMissing :: Either String (Maybe a)
+  parseMissing = Right Nothing
+
   parseType :: String -> Either String (Maybe a)
   parseType "" = Right Nothing
   parseType s  = Just <$> parseType s
@@ -203,7 +223,7 @@ naturalParser = L.natural simpleLexeme
 {-# INLINE naturalParser #-}
 
 parseResultToEither :: P.Result String a -> Either String a
-parseResultToEither (P.Failure e) = Left (show e)
+parseResultToEither (P.Failure e) = Left e
 parseResultToEither (P.Success a) = Right a
 {-# INLINE parseResultToEither #-}
 

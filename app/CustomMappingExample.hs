@@ -16,12 +16,12 @@ data Config = Config
     , debug     :: Maybe Bool }
     deriving (Show, Generic, EnvSchema)
 
--- | Run the validation with custom mapping
--- This will look for environment variables: PORT, NAME, MAINHOST, DEBUG
--- Note: main_host maps to MAINHOST (not MAIN_HOST) with map toUpper
+-- | Run the validation with custom mapping.
+-- This looks for environment variables: PORT, NAME, MAINHOST, DEBUG
+-- Note: main_host maps to MAINHOST (not MAIN_HOST) with map toUpper.
 main :: IO ()
 main = do
   errOrEnv <- validateEnvWith @Config (map toUpper)
   case errOrEnv of
-    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Left err  -> putStrLn $ "Validation failed:\n" ++ renderParseError err
     Right cfg -> putStrLn $ "Config loaded successfully: " ++ show cfg

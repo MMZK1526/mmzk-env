@@ -10,6 +10,10 @@
 -- records with witness types. The parsers are used to parse environment variables
 -- into records based on their string representation, with the witness types
 -- providing custom parsing behavior per field.
+--
+-- Like 'RecordParser', the generic implementation uses an internal 'Validation'
+-- applicative so that all field failures are collected rather than
+-- short-circuiting on the first one.
 module Data.Env.RecordParserW (
   RecordParserW (..),
   ColumnType (..),
@@ -18,11 +22,11 @@ module Data.Env.RecordParserW (
 ) where
 
 import Data.Data
+import Data.Env.ParseError
 import Data.Env.TypeParserW
 import Data.Kind
 import Data.Map ( Map )
 import Data.Map qualified as M
-import Data.Maybe
 import GHC.Generics
 
 -- | Column type indicator for distinguishing between declaration and result types.
@@ -49,12 +53,11 @@ class RecordParserW a where
   type RecordParsedType a
 
   -- | Parse a record from environment variables using witness types.
-  parseRecordW :: Map String String -> Either String (RecordParsedType a)
+  -- Returns a 'ParseError' listing *all* fields that failed, not just the
+  -- first one.
+  parseRecordW :: Map String String -> Either ParseError (RecordParsedType a)
 
-  -- | Parse a record, converting 'Either' to 'Maybe' and dropping any error messages.
-  --
-  -- This is a convenience function that calls 'parseRecordW' and converts the result
-  -- from 'Either String a' to 'Maybe a', discarding the error message on failure.
+  -- | Parse a record, discarding any error message on failure.
   parseRecordW' :: Map String String -> Maybe (RecordParsedType a)
   parseRecordW' env = case parseRecordW @a env of
     Right val -> Just val
@@ -68,8 +71,32 @@ instance
   ) => RecordParserW (a 'Dec) where
   type RecordParsedType (a 'Dec) = a 'Res
 
-  parseRecordW :: Map String String -> Either String (RecordParsedType (a 'Dec))
-  parseRecordW a = to <$> gParseRecord @(Rep (a 'Dec)) a
+  parseRecordW :: Map String String -> Either ParseError (RecordParsedType (a 'Dec))
+  parseRecordW a = validationToEither (to <$> gParseRecord @(Rep (a 'Dec)) a)
+
+
+--------------------------------------------------------------------------------
+-- Internal Validation applicative for error accumulation
+--------------------------------------------------------------------------------
+
+-- | Like 'Either', but the 'Applicative' instance accumulates failures using
+-- the 'Semigroup' on @e@ instead of short-circuiting.
+data Validation e a = VFailure e | VSuccess a
+
+instance Functor (Validation e) where
+  fmap _ (VFailure e) = VFailure e
+  fmap f (VSuccess a) = VSuccess (f a)
+
+instance Semigroup e => Applicative (Validation e) where
+  pure = VSuccess
+  VSuccess f  <*> VSuccess x  = VSuccess (f x)
+  VFailure e1 <*> VFailure e2 = VFailure (e1 <> e2)
+  VFailure e  <*> _           = VFailure e
+  _           <*> VFailure e  = VFailure e
+
+validationToEither :: Validation e a -> Either e a
+validationToEither (VSuccess a) = Right a
+validationToEither (VFailure e) = Left e
 
 
 --------------------------------------------------------------------------------
@@ -80,39 +107,41 @@ instance
 class GRecordParserW f where
   type GRecordParsedType f :: k -> Type
 
-  gParseRecord :: Map String String -> Either String ((GRecordParsedType f) r)
+  gParseRecord :: Map String String -> Validation ParseError ((GRecordParsedType f) r)
 
 -- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParserW f => GRecordParserW (M1 D c f) where
   type GRecordParsedType (M1 D c f) = M1 D c (GRecordParsedType f)
 
-  gParseRecord :: Map String String -> Either String (GRecordParsedType (M1 D c f) r)
   gParseRecord env = M1 <$> gParseRecord @f env
 
 -- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParserW f => GRecordParserW (M1 C c f) where
   type GRecordParsedType (M1 C c f) = M1 C c (GRecordParsedType f)
 
-  gParseRecord :: Map String String -> Either String (GRecordParsedType (M1 C c f) r)
   gParseRecord env = M1 <$> gParseRecord @f env
 
--- | Handle multiple fields in a record
+-- | Handle multiple fields in a record — uses 'Validation' so both sides are
+-- always evaluated, accumulating all failures.
 instance (GRecordParserW f, GRecordParserW g) => GRecordParserW (f :*: g) where
   type GRecordParsedType (f :*: g) = GRecordParsedType f :*: GRecordParsedType g
 
-  gParseRecord :: Map String String -> Either String ((GRecordParsedType f :*: GRecordParsedType g) p)
   gParseRecord env = (:*:) <$> gParseRecord @f env <*> gParseRecord @g env
 
--- | Handle individual fields
+-- | Handle an individual field — wraps any 'TypeParserW' failure in a
+-- 'FieldError' keyed by the Haskell field name.
 instance (TypeParserW p a, Selector s) => GRecordParserW (M1 S s (K1 i (p, a))) where
   type GRecordParsedType (M1 S s (K1 i (p, a))) = M1 S s (K1 i a)
 
-  gParseRecord :: Map String String -> Either String (M1 S s (K1 i a) r)
   gParseRecord env =
-    let key = selName (undefined :: M1 S s (K1 i a) p)
-    in  M1 . K1 <$> case parseTypeW @p Proxy (fromMaybe "" $ M.lookup key env) of
-        Left err  -> Left $ "Field " ++ show key ++ " parsing error:\n" ++ err
-        Right val -> Right val
+    let key    = selName (undefined :: M1 S s (K1 i a) p)
+        result = case M.lookup key env of
+          Nothing -> parseMissingW @p Proxy
+          Just "" -> parseMissingW @p Proxy
+          Just v  -> parseTypeW @p Proxy v
+    in  M1 . K1 <$> case result of
+          Left msg  -> VFailure $ ParseError [FieldError { errField = key, errMessage = msg }]
+          Right val -> VSuccess val
 
 -- | Type alias for declaring fields with polymorphic witness types.
 --

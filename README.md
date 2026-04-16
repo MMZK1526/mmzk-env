@@ -10,6 +10,7 @@ ensuring that they conform to the expected types.
   - [Contents](#contents)
   - [Quick Start](#quick-start)
     - [Custom Environment Variable Mapping](#custom-environment-variable-mapping)
+  - [Error Handling](#error-handling)
   - [Enum Support](#enum-support)
   - [Witness Types: Avoiding Newtype Boilerplate](#witness-types-avoiding-newtype-boilerplate)
     - [The Problem: Newtype Boilerplate](#the-problem-newtype-boilerplate)
@@ -42,7 +43,7 @@ main :: IO ()
 main = do
   errOrEnv <- validateEnv @Config
   case errOrEnv of
-    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Left err  -> putStrLn $ "Validation failed:\n" ++ renderParseError err
     Right cfg -> putStrLn $ "Config loaded successfully: " ++ show cfg
 ```
 
@@ -70,13 +71,68 @@ main :: IO ()
 main = do
   errOrEnv <- validateEnvWith @Config (map toUpper)
   case errOrEnv of
-    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Left err  -> putStrLn $ "Validation failed:\n" ++ renderParseError err
     Right cfg -> putStrLn $ "Config loaded successfully: " ++ show cfg
 ```
 
 With `validateEnvWith (map toUpper)`, the field `main_host` will look for the environment variable `MAINHOST` instead of `MAIN_HOST`.
 
 You can provide any custom mapping function to `validateEnvWith` to transform field names to environment variable names according to your needs.
+
+## Error Handling
+
+`validateEnv` (and its variants) returns `Either ParseError a`. Unlike a simple `Either String` approach, `ParseError` collects **all** field failures in a single pass — so every invalid field is reported at once, not just the first one.
+
+Use `renderParseError` to format the error for display:
+
+```Haskell
+case errOrEnv of
+  Left err  -> putStrLn $ "Validation failed:\n" ++ renderParseError err
+  Right cfg -> ...
+```
+
+A single-field failure shows the field name, then the detail indented below:
+
+```
+port: invalid field
+  (line 1, column 1):
+    unexpected "n"
+    expected an integer
+    >not-a-number
+     ^
+```
+
+A missing required field gives a clear message instead of a parser error:
+
+```
+name: invalid field
+  missing required environment variable
+```
+
+Multiple failures are numbered in field-declaration order:
+
+```
+2 fields failed to parse:
+  1. port: invalid field
+     (line 1, column 1):
+       unexpected "n"
+       expected an integer
+       >not-a-number
+        ^
+  2. name: invalid field
+     missing required environment variable
+```
+
+`ParseError` and `FieldError` are both exported from `Data.Env`, so you can also inspect them programmatically:
+
+```Haskell
+import Data.Env (ParseError(..), FieldError(..))
+
+case errOrEnv of
+  Right cfg -> ...
+  Left (ParseError errs) ->
+    mapM_ (\fe -> putStrLn $ fe.errField ++ " is invalid") errs
+```
 
 ## Enum Support
 
@@ -94,9 +150,12 @@ data Gender = Male | Female
   deriving (Show, Eq, Enum, Bounded)
   deriving TypeParser via (EnumParser Gender)
 
-print $ parseEnum @Gender "Male"   -- Right Male
-print $ parseEnum @Gender "Female" -- Right Female
+parseType @Gender "Male"    -- Right Male
+parseType @Gender "Female"  -- Right Female
+parseType @Gender "male"    -- Left "invalid value \"male\"; expected one of: Male, Female"
 ```
+
+Enum parsing is case-sensitive and the error message lists all valid constructors.
 
 ## Witness Types: Avoiding Newtype Boilerplate
 
@@ -124,7 +183,7 @@ newtype PsqlPort = PsqlPort Word16
 
 -- Implement custom parsing with default value
 instance TypeParser PsqlPort where
-  parseType "" = Right (PsqlPort 5432)  -- Default to 5432
+  parseMissing = Right (PsqlPort 5432)  -- Default to 5432 when absent
   parseType str = case parseType str of
     Right port -> Right (PsqlPort port)
     Left err   -> Left err
@@ -145,8 +204,6 @@ connectToDatabase :: Config -> IO Connection
 connectToDatabase cfg = connect $ defaultConnectInfo
   { connectPort = unpackPort (psqlPort cfg)  -- Annoying unpacking!
   , connectDatabase = dbName cfg }
-  where
-    unpackPort (PsqlPort port) = port
 ```
 
 ### The Solution: Witnesses
@@ -158,23 +215,23 @@ With witness types, you can specify parsing behaviour at the type level while ke
 ```Haskell
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 import Data.Env
+import Data.Env.RecordParserW
+import Data.Env.TypeParserW
 import Data.Env.Witness.DefaultNum
 import Data.Word
 import GHC.Generics
-import Data.Env.TypeParserW
 
 data Config c = Config
   { psqlPort :: Column c (DefaultNum 5432 Word16) Word16  -- Defaults to 5432
   , dbName   :: Column c (Solo String) String }
-  deriving (Generic, EnvSchemaW)
+  deriving (Generic)
 
-instance EnvSchemaW (Config \'Dec)
+instance EnvSchemaW (Config 'Dec)
 deriving stock instance Show (Config 'Res)  -- For printing the result
 
 -- Validate environment variables with defaults
@@ -182,7 +239,7 @@ main :: IO ()
 main = do
   errOrConfig <- validateEnvW @(Config 'Dec)
   case errOrConfig of
-    Left err  -> putStrLn $ "Validation failed: " ++ err
+    Left err  -> putStrLn $ "Validation failed:\n" ++ renderParseError err
     Right cfg -> connectToDatabase cfg  -- cfg :: Config 'Res
 ```
 
@@ -212,15 +269,16 @@ connectToDatabase cfg = connect $ defaultConnectInfo
 
 - **`Solo a`**: Standard parsing without special behaviour (equivalent to `TypeParser`)
 - **`DefaultNum n a`**: Numeric types with a type-level default value `n`
-- - **`DefaultString s a`**: String types with a type-level default value `s`
+- **`DefaultString s a`**: String types with a type-level default value `s`
+- **`DefaultBool b a`**: `Bool` with a type-level default; also accepts `true`/`false`, `t`/`f`, `1`/`0`
 - **Custom witnesses**: You can define your own by implementing the `TypeParserW` class
 
 More built-in witnesses will be provided.
 
 For more complex parsing needs, witnesses provide a way to augment behaviour without polluting your domain types with wrapper noise.
 
-[quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/QuickstartExample.hs
-[custom-mapping-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/CustomMappingExample.hs
-[enum-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/EnumExample.hs
-[newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/NewtypeExample.hs
-[witness-example]: https://github.com/MMZK1526/mmzk-env/blob/v0.2.1.0/app/WitnessExample.hs
+[quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/QuickstartExample.hs
+[custom-mapping-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/CustomMappingExample.hs
+[enum-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/EnumExample.hs
+[newtype-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/NewtypeExample.hs
+[witness-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/WitnessExample.hs

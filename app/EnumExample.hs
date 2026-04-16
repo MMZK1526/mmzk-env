@@ -12,5 +12,12 @@ data Gender = Male | Female
 
 main :: IO ()
 main = do
+  putStrLn "=== Valid values ==="
   print $ parseType @Gender "Male"    -- Right Male
   print $ parseType @Gender "Female"  -- Right Female
+
+  putStrLn ""
+  putStrLn "=== Invalid values ==="
+  print $ parseType @Gender "male"    -- Left: wrong case
+  print $ parseType @Gender "Other"   -- Left: not a constructor
+  print $ parseType @Gender ""        -- Left: empty

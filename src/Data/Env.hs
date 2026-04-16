@@ -6,10 +6,18 @@
 --
 -- This module provides functionality to validate environment variables against
 -- a schema (a type that implements the `EnvSchema` class).
-module Data.Env ( EnvSchema(..), EnvSchemaW(..) ) where
+module Data.Env (
+  EnvSchema (..),
+  EnvSchemaW (..),
+  ParseError (..),
+  FieldError (..),
+  renderParseError,
+  renderFieldError,
+) where
 
 import Control.Monad.IO.Class
 import Data.Env.ExtractFields
+import Data.Env.ParseError
 import Data.Env.RecordParser
 import Data.Env.RecordParserW
 
@@ -17,15 +25,15 @@ import Data.Env.RecordParserW
 class (ExtractFields a, RecordParser a) => EnvSchema a where
   -- | Validate the environment variables against the schema, transforming field
   -- names from camelCase to UPPER_SNAKE_CASE.
-  validateEnv :: MonadIO m => m (Either String a)
+  validateEnv :: MonadIO m => m (Either ParseError a)
   validateEnv = do
     envRaw <- getEnvRawCamelCaseToUpperSnake @a
     return $ parseRecord envRaw
 
   -- | Validate the environment variables against the schema, allowing for a
-  -- cusutom transformation function to be applied to the field names to match
+  -- custom transformation function to be applied to the field names to match
   -- with the environment variable names.
-  validateEnvWith :: MonadIO m => (String -> String) -> m (Either String a)
+  validateEnvWith :: MonadIO m => (String -> String) -> m (Either ParseError a)
   validateEnvWith transform = do
     envRaw <- getEnvRaw @a transform
     return $ parseRecord envRaw
@@ -44,20 +52,20 @@ class (ExtractFields a, RecordParser a) => EnvSchema a where
 --
 -- instance EnvSchemaW (Config \'Dec)
 --
--- loadConfig :: IO (Either String (Config \'Res))
+-- loadConfig :: IO (Either ParseError (Config \'Res))
 -- loadConfig = validateEnvW \@(Config \'Dec)
 -- @
 class (ExtractFields a, RecordParserW a) => EnvSchemaW a where
   -- | Validate environment variables, transforming field names from camelCase
   -- to UPPER_SNAKE_CASE. Returns the parsed configuration with unwrapped values.
-  validateEnvW :: MonadIO m => m (Either String (RecordParsedType a))
+  validateEnvW :: MonadIO m => m (Either ParseError (RecordParsedType a))
   validateEnvW = do
     envRaw <- getEnvRawCamelCaseToUpperSnake @a
     return $ parseRecordW @a envRaw
 
   -- | Validate environment variables with a custom field name transformation
   -- function. Returns the parsed configuration with unwrapped values.
-  validateEnvWWith :: MonadIO m => (String -> String) -> m (Either String (RecordParsedType a))
+  validateEnvWWith :: MonadIO m => (String -> String) -> m (Either ParseError (RecordParsedType a))
   validateEnvWWith transform = do
     envRaw <- getEnvRaw @a transform
     return $ parseRecordW @a envRaw

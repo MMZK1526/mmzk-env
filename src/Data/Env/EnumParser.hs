@@ -19,6 +19,7 @@
 module Data.Env.EnumParser where
 
 import Data.Env.TypeParser ( TypeParser(..) )
+import Data.List ( intercalate )
 
 -- | A helper type for parsing Bounded Enums.
 newtype EnumParser a = EnumParser a
@@ -28,6 +29,7 @@ instance (Enum a, Show a, Bounded a) => TypeParser (EnumParser a) where
   parseType :: (Enum a, Show a, Bounded a) => String -> Either String (EnumParser a)
   parseType s = case lookup s enumMap of
     Just v  -> Right (EnumParser v)
-    Nothing -> Left $ "Cannot parse value: " ++ s ++ ". Valid values are: " ++ show (map fst enumMap)
+    Nothing -> Left $ "invalid value " ++ show s
+                   ++ "; expected one of: " ++ intercalate ", " (map fst enumMap)
     where
       enumMap = [(show e, e) | e <- [minBound..maxBound]]
