@@ -143,8 +143,16 @@ instance (TypeParserW p a, Selector s) => GRecordParserW (M1 S s (K1 i (p, a))) 
           Left msg  -> VFailure $ ParseError [FieldError { errField = key, errMessage = msg }]
           Right val -> VSuccess val
 
--- | Type alias for declaring fields with polymorphic witness types.
+-- | Convenience alias for 'Column' when the witness is a type constructor of
+-- kind @Type -> Type@.
 --
--- This is a convenience alias for 'Column c (f a) a', commonly used to declare
--- record fields with a witness type @f a@ and a result type @a@.
+-- @'Di' f c a@ is equivalent to @'Column' c (f a) a@. Prefer 'Di' for
+-- witnesses like @DefaultNum 5432@ that are partially applied; use 'Column'
+-- directly for witnesses that are already fully applied types.
+--
+-- @
+-- -- Both field declarations below have the same type (use one, not both):
+-- fieldA :: Column c (DefaultNum 5432 Word16) Word16
+-- fieldB :: Di (DefaultNum 5432) c Word16
+-- @
 type Di f c a = Column c (f a) a

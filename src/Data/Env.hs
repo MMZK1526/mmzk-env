@@ -58,6 +58,21 @@ class (ExtractFields a, RecordParser a) => EnvSchema a where
 class (ExtractFields a, RecordParserW a) => EnvSchemaW a where
   -- | Validate environment variables, transforming field names from camelCase
   -- to UPPER_SNAKE_CASE. Returns the parsed configuration with unwrapped values.
+  --
+  -- An underscore is inserted before any uppercase letter not immediately
+  -- preceded by another uppercase letter or an underscore. Notable behaviours:
+  --
+  -- * Consecutive uppercase runs are not split: @myHTTPClient@ maps to
+  --   @MY_HTTPCLIENT@, not @MY_HTTP_CLIENT@. Place the word boundary before
+  --   the run to get a split: @myHttpClient@ → @MY_HTTP_CLIENT@.
+  -- * A digit followed by an uppercase letter still inserts an underscore:
+  --   @http2Client@ maps to @HTTP2_CLIENT@. Trailing digits pass through
+  --   without one: @port8080@ maps to @PORT8080@.
+  -- * A literal underscore in the field name is passed through unchanged and
+  --   suppresses the auto-inserted separator: @my_host@ maps to @MY_HOST@,
+  --   not @MY__HOST@.
+  -- * A field name starting with an uppercase letter produces a leading
+  --   underscore. Use 'validateEnvWWith' with a custom transform to avoid this.
   validateEnvW :: MonadIO m => m (Either ParseError (RecordParsedType a))
   validateEnvW = do
     envRaw <- getEnvRawCamelCaseToUpperSnake @a

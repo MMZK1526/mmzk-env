@@ -245,10 +245,9 @@ main = do
 
 The magic happens with the `Column` type family and the `ColumnType` phantom type:
 
-- **`Config 'Dec`** (Declaration): The type used for parsing, where each field is `(witness, value)`
-  - This works under the hood for the generic instances and users typically don't interact with it directly
-- **`Config 'Res`** (Result): The type you work with, where each field is just `value`
-- **`Column c witness a`**: Expands to `(witness, a)` when `c = 'Dec`, or just `a` when `c = 'Res`
+- **`Config 'Dec`** (Declaration): The type you write in the `instance` head and pass to `validateEnvW @(Config 'Dec)`. At the type level each field is `(witness, value)`, but the library never constructs a runtime value of `Config 'Dec` — you use it solely as a type-level argument.
+- **`Config 'Res`** (Result): The type you work with after parsing. Each field is just `value`.
+- **`Column c witness a`**: Expands to `(witness, a)` when `c = 'Dec`, or just `a` when `c = 'Res`.
 
 Now your final config has no wrappers:
 
