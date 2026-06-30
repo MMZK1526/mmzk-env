@@ -4,7 +4,7 @@
 Module      : Data.Env
 Description : Environment-variable schema validation
 
-Top-level interface.  'EnvSchemaW' is the primary class; 'EnvSchema' covers
+Top-level interface. 'EnvSchemaW' is the primary class; 'EnvSchema' covers
 the simpler non-witness case.
 -}
 module Data.Env
@@ -31,13 +31,13 @@ class (ExtractFields a, RecordParser a) => EnvSchema a where
   validateEnv :: MonadIO m => m (Either ParseError a)
   validateEnv = do
     envRaw <- getEnvRawCamelCaseToUpperSnake @a
-    return $ parseRecord envRaw
+    pure $ parseRecord envRaw
 
   -- | Validate with a custom field-name transform.
   validateEnvWith :: MonadIO m => (String -> String) -> m (Either ParseError a)
   validateEnvWith transform = do
     envRaw <- getEnvRaw @a transform
-    return $ parseRecord envRaw
+    pure $ parseRecord envRaw
 
 {- | Type class for validating 'Col'-based environment schemas.
 
@@ -52,7 +52,7 @@ validateEnvW mySchema { port = ''typeParser' \@Int \`orElse\` 5432 }
 Use 'validateEnvWDefault' to auto-derive the schema from 'TypeParser'
 instances when no overrides are needed.
 
-Field names are converted from camelCase to UPPER_SNAKE_CASE.  Notable
+Field names are converted from camelCase to UPPER_SNAKE_CASE. Notable
 behaviours:
 
 * Consecutive uppercase runs are not split: @myHTTPClient@ → @MY_HTTPCLIENT@.
@@ -65,7 +65,7 @@ class (ExtractFields a, RecordParserW a) => EnvSchemaW a where
   validateEnvW :: MonadIO m => a -> m (Either ParseError (RecordParsedType a))
   validateEnvW schema = do
     envRaw <- getEnvRawCamelCaseToUpperSnake @a
-    return $ parseRecordW schema envRaw
+    pure $ parseRecordW schema envRaw
 
   -- | Validate with a custom field-name transform.
   validateEnvWWith
@@ -75,7 +75,7 @@ class (ExtractFields a, RecordParserW a) => EnvSchemaW a where
     -> m (Either ParseError (RecordParsedType a))
   validateEnvWWith transform schema = do
     envRaw <- getEnvRaw @a transform
-    return $ parseRecordW schema envRaw
+    pure $ parseRecordW schema envRaw
 
 {- | Validate using the auto-derived default schema.
 

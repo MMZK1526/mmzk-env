@@ -45,7 +45,7 @@ getEnvRaw :: forall a m. (MonadIO m, ExtractFields a)
           -> m (Map String String)
 getEnvRaw mapper = liftIO $ M.fromList <$> forM (extractFields @a) \field -> do
   value <- lookupEnv (mapper field)
-  return (field, fromMaybe "" value)
+  pure (field, fromMaybe "" value)
 {-# INLINE getEnvRaw #-}
 
 -- | Retrieve environment variables based on field names, converting them from

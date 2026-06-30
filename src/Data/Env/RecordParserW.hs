@@ -12,8 +12,8 @@ fields use the 'Col' column family.
 == Design
 
 A @schema 'Dec@ is a plain Haskell record whose fields are functions
-@'String' -> 'Either' 'String' a@.  An absent or empty env variable is
-passed as @""@; the function decides what to do.  A @schema 'Res@ is the
+@'String' -> 'Either' 'String' a@. An absent or empty env variable is
+passed as @""@; the function decides what to do. A @schema 'Res@ is the
 same record with each field replaced by its resolved value.
 
 @
@@ -83,7 +83,7 @@ type family Col (c :: ColumnType) (a :: Type) :: Type where
 {- | Build the standard field parser for any 'TypeParser' type.
 
 Passes non-empty strings to 'TP.parseType' and treats @""@ (absent or empty
-env variable) as a missing value, delegating to 'TP.parseMissing'.  Most
+env variable) as a missing value, delegating to 'TP.parseMissing'. Most
 types treat absence as an error (required field); 'Maybe' returns
 @'Right' 'Nothing'@.
 
@@ -118,7 +118,7 @@ orElse f _ s = f s
 
 {- | Build a field parser from a 'TypeParserW' witness.
 
-Bridges existing witness types into the value-level field API.  Also
+Bridges existing witness types into the value-level field API. Also
 composable with 'orElse':
 
 @
@@ -157,7 +157,7 @@ instance
 
 {- | Generically derive a @schema 'Dec@ whose every field uses 'typeParser'.
 
-Requires every field type to have a 'TypeParser' instance.  Override
+Requires every field type to have a 'TypeParser' instance. Override
 individual fields on the returned value to customise parsing:
 
 @
