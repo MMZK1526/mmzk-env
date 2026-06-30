@@ -2,85 +2,182 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
--- |
--- Module: Data.Env.RecordParserW
--- Description: Type class that provides parsers for records with witnesses.
---
--- This module provides a type class 'RecordParserW' that provides parsers for
--- records with witness types. The parsers are used to parse environment variables
--- into records based on their string representation, with the witness types
--- providing custom parsing behavior per field.
---
--- Like 'RecordParser', the generic implementation uses an internal 'Validation'
--- applicative so that all field failures are collected rather than
--- short-circuiting on the first one.
-module Data.Env.RecordParserW (
-  RecordParserW (..),
-  ColumnType (..),
-  Column,
-  Di,
-) where
+{- |
+Module      : Data.Env.RecordParserW
+Description : Schema-driven record parsing with value-level field parsers
 
-import Data.Data
+Provides 'RecordParserW' for parsing environment-variable schemas whose
+fields use the 'Col' column family.
+
+== Design
+
+A @schema 'Dec@ is a plain Haskell record whose fields are functions
+@'String' -> 'Either' 'String' a@.  An absent or empty env variable is
+passed as @""@; the function decides what to do.  A @schema 'Res@ is the
+same record with each field replaced by its resolved value.
+
+@
+data DbConfig c = DbConfig
+  { host :: Col c Text
+  , port :: Col c Int
+  }
+  deriving (Generic)
+
+instance RecordParserW (DbConfig \'Dec)
+
+-- Default schema (both fields required — no default):
+schema :: DbConfig \'Dec
+schema = 'defaultSchema' \@DbConfig
+
+-- Schema with runtime defaults, using infix 'orElse':
+schema' :: DbConfig \'Dec
+schema' = schema
+  { host = 'typeParser' \@Text \`orElse\` \"localhost\"
+  , port = 'typeParser' \@Int  \`orElse\` 5432
+  }
+@
+
+== Helpers
+
+* 'typeParser' — builds the standard parser for any 'TypeParser' type.
+* 'orElse' — sets the fallback value when the env variable is absent or empty.
+* 'fromTypeParserW' — bridges a 'TypeParserW' witness into a field function.
+-}
+module Data.Env.RecordParserW
+  ( RecordParserW (..)
+  , HasDefaultSchema (..)
+  , ColumnType (..)
+  , Col
+  , typeParser
+  , orElse
+  , fromTypeParserW
+  ) where
+
 import Data.Env.ParseError
-import Data.Env.TypeParserW
-import Data.Kind
-import Data.Map ( Map )
+import Data.Env.TypeParser (TypeParser)
+import Data.Env.TypeParser qualified as TP
+import Data.Env.TypeParserW (TypeParserW)
+import Data.Env.TypeParserW qualified as TPW
+import Data.Kind (Type)
+import Data.Map (Map)
 import Data.Map qualified as M
+import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
 import GHC.Generics
 
--- | Column type indicator for distinguishing between declaration and result types.
+-- | Column type indicator.
 --
--- * 'Dec' - Declaration type containing both witness and value types
--- * 'Res' - Result type containing only value types
+-- * 'Dec' — schema column; each field holds a @'String' -> 'Either' 'String' a@ parser.
+-- * 'Res' — result column; each field holds the resolved @a@.
 data ColumnType = Dec | Res
   deriving stock (Eq, Show)
 
--- | Type family that maps column types to their representation.
+-- | Type family mapping a column kind to the field representation.
 --
--- For 'Dec' (declaration) columns, the type is a pair of witness and value.
--- For 'Res' (result) columns, the type is just the value.
---
--- In application code, typically only 'Res is used to access the parsed record values,
--- while 'Dec is used for the schema definition during parsing.
-type family Column (t :: ColumnType) (p :: Type) (a :: Type) where
-  Column 'Dec p a = (p, a)
-  Column 'Res p a = a
+-- @'Col' ''Dec' a = 'String' -> 'Either' 'String' a@
+-- @'Col' ''Res' a = a@
+type family Col (c :: ColumnType) (a :: Type) :: Type where
+  Col 'Dec a = String -> Either String a
+  Col 'Res a = a
 
--- | Type class for parsing environment schemas with witness types.
+{- | Build the standard field parser for any 'TypeParser' type.
+
+Passes non-empty strings to 'TP.parseType' and treats @""@ (absent or empty
+env variable) as a missing value, delegating to 'TP.parseMissing'.  Most
+types treat absence as an error (required field); 'Maybe' returns
+@'Right' 'Nothing'@.
+
+Combine with 'orElse' to supply a fallback:
+
+@
+port = 'typeParser' \@Int \`orElse\` 5432
+@
+-}
+typeParser :: forall a. TypeParser a => String -> Either String a
+typeParser "" = TP.parseMissing @a
+typeParser s = TP.parseType s
+{-# INLINE typeParser #-}
+
+{- | Set the fallback value when the env variable is absent or empty.
+
+Designed for infix use with 'typeParser' or 'fromTypeParserW':
+
+@
+port  = 'typeParser' \@Int  \`orElse\` 5432
+host  = 'typeParser' \@Text \`orElse\` \"localhost\"
+model = 'typeParser' \@Text \`orElse\` \"claude-sonnet-4-6\"
+@
+
+@f \`orElse\` d@ returns @'Right' d@ when the variable is absent or empty,
+and @f s@ for any non-empty string @s@.
+-}
+orElse :: (String -> Either String a) -> a -> String -> Either String a
+orElse _ d "" = Right d
+orElse f _ s = f s
+{-# INLINE orElse #-}
+
+{- | Build a field parser from a 'TypeParserW' witness.
+
+Bridges existing witness types into the value-level field API.  Also
+composable with 'orElse':
+
+@
+fromTypeParserW \@MyCustomWitness \`orElse\` \"fallback\"
+@
+-}
+fromTypeParserW :: forall p a. TypeParserW p a => String -> Either String a
+fromTypeParserW "" = TPW.parseMissingW @p Proxy
+fromTypeParserW s = TPW.parseTypeW @p Proxy s
+{-# INLINE fromTypeParserW #-}
+
+-- | Type class for schemas whose fields are 'Col' columns.
+--
+-- The method 'parseRecordW' takes the schema value (a @schema 'Dec@) and an
+-- env map, returning all field failures collected rather than stopping at
+-- the first.
 class RecordParserW a where
-  -- | The result type after parsing, which removes witness types.
+  -- | The resolved type produced by parsing @a@.
   type RecordParsedType a
 
-  -- | Parse a record from environment variables using witness types.
-  -- Returns a 'ParseError' listing *all* fields that failed, not just the
-  -- first one.
-  parseRecordW :: Map String String -> Either ParseError (RecordParsedType a)
-
-  -- | Parse a record, discarding any error message on failure.
-  parseRecordW' :: Map String String -> Maybe (RecordParsedType a)
-  parseRecordW' env = case parseRecordW @a env of
-    Right val -> Just val
-    Left _    -> Nothing
+  -- | Parse all fields from the env map using the schema's field functions.
+  parseRecordW :: a -> Map String String -> Either ParseError (RecordParsedType a)
 
 instance
   ( Generic (a 'Dec)
   , GRecordParserW (Rep (a 'Dec))
-  , Generic (a Res)
+  , Generic (a 'Res)
   , GRecordParsedType (Rep (a 'Dec)) () ~ Rep (a 'Res) ()
-  ) => RecordParserW (a 'Dec) where
+  ) =>
+  RecordParserW (a 'Dec)
+  where
   type RecordParsedType (a 'Dec) = a 'Res
+  parseRecordW :: a 'Dec -> Map String String -> Either ParseError (a 'Res)
+  parseRecordW schema env =
+    validationToEither (to <$> gParseRecord (from schema) env)
 
-  parseRecordW :: Map String String -> Either ParseError (RecordParsedType (a 'Dec))
-  parseRecordW a = validationToEither (to <$> gParseRecord @(Rep (a 'Dec)) a)
+{- | Generically derive a @schema 'Dec@ whose every field uses 'typeParser'.
+
+Requires every field type to have a 'TypeParser' instance.  Override
+individual fields on the returned value to customise parsing:
+
+@
+mySchema :: MyConfig \'Dec
+mySchema = ('defaultSchema' \@MyConfig)
+  { host = 'typeParser' \@Text \`orElse\` \"localhost\" }
+@
+-}
+class HasDefaultSchema a where
+  defaultSchema :: a 'Dec
+
+instance (Generic (a 'Dec), GDefaultSchema (Rep (a 'Dec))) => HasDefaultSchema a where
+  defaultSchema :: a 'Dec
+  defaultSchema = to gDefaultSchema
 
 
 --------------------------------------------------------------------------------
--- Internal Validation applicative for error accumulation
+-- Internal Validation applicative
 --------------------------------------------------------------------------------
 
--- | Like 'Either', but the 'Applicative' instance accumulates failures using
--- the 'Semigroup' on @e@ instead of short-circuiting.
 data Validation e a = VFailure e | VSuccess a
 
 instance Functor (Validation e) where
@@ -89,10 +186,10 @@ instance Functor (Validation e) where
 
 instance Semigroup e => Applicative (Validation e) where
   pure = VSuccess
-  VSuccess f  <*> VSuccess x  = VSuccess (f x)
+  VSuccess f <*> VSuccess x = VSuccess (f x)
   VFailure e1 <*> VFailure e2 = VFailure (e1 <> e2)
-  VFailure e  <*> _           = VFailure e
-  _           <*> VFailure e  = VFailure e
+  VFailure e <*> _ = VFailure e
+  _ <*> VFailure e = VFailure e
 
 validationToEither :: Validation e a -> Either e a
 validationToEither (VSuccess a) = Right a
@@ -100,59 +197,54 @@ validationToEither (VFailure e) = Left e
 
 
 --------------------------------------------------------------------------------
--- Generic instances
+-- Generic parsing
 --------------------------------------------------------------------------------
 
--- | Generic validation class.
 class GRecordParserW f where
-  type GRecordParsedType f :: k -> Type
+  type GRecordParsedType f :: Type -> Type
+  gParseRecord :: f () -> Map String String -> Validation ParseError ((GRecordParsedType f) ())
 
-  gParseRecord :: Map String String -> Validation ParseError ((GRecordParsedType f) r)
-
--- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParserW f => GRecordParserW (M1 D c f) where
   type GRecordParsedType (M1 D c f) = M1 D c (GRecordParsedType f)
+  gParseRecord (M1 x) env = M1 <$> gParseRecord x env
 
-  gParseRecord env = M1 <$> gParseRecord @f env
-
--- | Handle metadata (wrapping fields in 'GHC.Generics.M1')
 instance GRecordParserW f => GRecordParserW (M1 C c f) where
   type GRecordParsedType (M1 C c f) = M1 C c (GRecordParsedType f)
+  gParseRecord (M1 x) env = M1 <$> gParseRecord x env
 
-  gParseRecord env = M1 <$> gParseRecord @f env
-
--- | Handle multiple fields in a record — uses 'Validation' so both sides are
--- always evaluated, accumulating all failures.
 instance (GRecordParserW f, GRecordParserW g) => GRecordParserW (f :*: g) where
   type GRecordParsedType (f :*: g) = GRecordParsedType f :*: GRecordParsedType g
+  gParseRecord (x :*: y) env = (:*:) <$> gParseRecord x env <*> gParseRecord y env
 
-  gParseRecord env = (:*:) <$> gParseRecord @f env <*> gParseRecord @g env
-
--- | Handle an individual field — wraps any 'TypeParserW' failure in a
--- 'FieldError' keyed by the Haskell field name.
-instance (TypeParserW p a, Selector s) => GRecordParserW (M1 S s (K1 i (p, a))) where
-  type GRecordParsedType (M1 S s (K1 i (p, a))) = M1 S s (K1 i a)
-
-  gParseRecord env =
-    let key    = selName (undefined :: M1 S s (K1 i a) p)
-        result = case M.lookup key env of
-          Nothing -> parseMissingW @p Proxy
-          Just "" -> parseMissingW @p Proxy
-          Just v  -> parseTypeW @p Proxy v
-    in  M1 . K1 <$> case result of
-          Left msg  -> VFailure $ ParseError [FieldError { errField = key, errMessage = msg }]
+instance Selector s => GRecordParserW (M1 S s (K1 i (String -> Either String a))) where
+  type GRecordParsedType (M1 S s (K1 i (String -> Either String a))) = M1 S s (K1 i a)
+  gParseRecord (M1 (K1 fn)) env =
+    let key = selName (undefined :: M1 S s (K1 i a) p)
+        result = fn (fromMaybe "" (M.lookup key env))
+     in M1 . K1 <$> case result of
+          Left msg -> VFailure $ ParseError [FieldError{errField = key, errMessage = msg}]
           Right val -> VSuccess val
 
--- | Convenience alias for 'Column' when the witness is a type constructor of
--- kind @Type -> Type@.
---
--- @'Di' f c a@ is equivalent to @'Column' c (f a) a@. Prefer 'Di' for
--- witnesses like @DefaultNum 5432@ that are partially applied; use 'Column'
--- directly for witnesses that are already fully applied types.
---
--- @
--- -- Both field declarations below have the same type (use one, not both):
--- fieldA :: Column c (DefaultNum 5432 Word16) Word16
--- fieldB :: Di (DefaultNum 5432) c Word16
--- @
-type Di f c a = Column c (f a) a
+
+--------------------------------------------------------------------------------
+-- Generic default schema
+--------------------------------------------------------------------------------
+
+class GDefaultSchema f where
+  gDefaultSchema :: f ()
+
+instance GDefaultSchema f => GDefaultSchema (M1 D c f) where
+  gDefaultSchema :: M1 D c f ()
+  gDefaultSchema = M1 gDefaultSchema
+
+instance GDefaultSchema f => GDefaultSchema (M1 C c f) where
+  gDefaultSchema :: M1 C c f ()
+  gDefaultSchema = M1 gDefaultSchema
+
+instance (GDefaultSchema f, GDefaultSchema g) => GDefaultSchema (f :*: g) where
+  gDefaultSchema :: (f :*: g) ()
+  gDefaultSchema = gDefaultSchema :*: gDefaultSchema
+
+instance TypeParser a => GDefaultSchema (M1 S s (K1 i (String -> Either String a))) where
+  gDefaultSchema :: M1 S s (K1 i (String -> Either String a)) ()
+  gDefaultSchema = M1 (K1 (typeParser @a))

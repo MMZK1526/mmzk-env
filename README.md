@@ -157,60 +157,40 @@ parseType @Gender "male"    -- Left "invalid value \"male\"; expected one of: Ma
 
 Enum parsing is case-sensitive and the error message lists all valid constructors.
 
-## Witness Types: Avoiding Newtype Boilerplate
+## Schema Types: Value-Level Parsing with Defaults
 
-The library provides a "witness" pattern that allows you to enhance parsing behaviour without wrapping values in newtypes. This is useful when you need features like default values, validation, or transformation but want to keep your final data types simple.
+The library provides a schema pattern that keeps your final data type clean (no newtype wrappers, no unpacking) while allowing defaults, validation, and custom parsing to be specified as plain Haskell values.
 
 ### The Problem: Newtype Boilerplate
 
 **[Full example →][newtype-example]**
 
-Let's say you want to parse a PostgreSQL port that defaults to 5432. Without witnesses, you might create a newtype wrapper:
+Suppose you want a PostgreSQL port that defaults to 5432. Without the schema pattern you might write a newtype:
 
 ```Haskell
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeApplications #-}
+newtype PsqlPort = PsqlPort Word16 deriving (Show, Eq)
 
-import Data.Env
-import Data.Env.TypeParser
-import Data.Word
-import GHC.Generics
-
--- Define a newtype wrapper for the port
-newtype PsqlPort = PsqlPort Word16
-  deriving (Show, Eq)
-
--- Implement custom parsing with default value
 instance TypeParser PsqlPort where
-  parseMissing = Right (PsqlPort 5432)  -- Default to 5432 when absent
-  parseType str = case parseType str of
-    Right port -> Right (PsqlPort port)
-    Left err   -> Left err
+  parseMissing = Right (PsqlPort 5432)
+  parseType str = PsqlPort <$> parseType str
 
-data Config = Config
-  { psqlPort :: PsqlPort
-  , dbName   :: String }
+data Config = Config { psqlPort :: PsqlPort, dbName :: String }
   deriving (Show, Generic, EnvSchema)
 ```
 
-Now when you use your config, you have to constantly unwrap the value:
+Now every use site must unwrap `PsqlPort`:
 
 ```Haskell
-unpackPort :: PsqlPort -> Word16
-unpackPort (PsqlPort port) = port
-
-connectToDatabase :: Config -> IO Connection
-connectToDatabase cfg = connect $ defaultConnectInfo
-  { connectPort = unpackPort (psqlPort cfg)  -- Annoying unpacking!
+connectToDatabase cfg = connect defaultConnectInfo
+  { connectPort = unpackPort (psqlPort cfg)  -- annoying unpacking
   , connectDatabase = dbName cfg }
 ```
 
-### The Solution: Witnesses
+### The Solution: Schema Records
 
 **[Full example →][witness-example]**
 
-With witness types, you can specify parsing behaviour at the type level while keeping the final value unwrapped:
+Define the config with the `Col` column family. Each field in `'Dec` holds a parser function; each field in `'Res` holds the resolved value:
 
 ```Haskell
 {-# LANGUAGE DataKinds #-}
@@ -218,63 +198,99 @@ With witness types, you can specify parsing behaviour at the type level while ke
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 import Data.Env
 import Data.Env.RecordParserW
-import Data.Env.TypeParserW
-import Data.Env.Witness.DefaultNum
 import Data.Word
 import GHC.Generics
 
 data Config c = Config
-  { psqlPort :: Column c (DefaultNum 5432 Word16) Word16  -- Defaults to 5432
-  , dbName   :: Column c (Solo String) String }
+  { psqlPort :: Col c Word16
+  , dbName   :: Col c String }
   deriving (Generic)
 
 instance EnvSchemaW (Config 'Dec)
-deriving stock instance Show (Config 'Res)  -- For printing the result
+deriving stock instance Show (Config 'Res)
 
--- Validate environment variables with defaults
+-- Schema value: psqlPort defaults to 5432, dbName is required.
+defaultConfig :: Config 'Dec
+defaultConfig = Config
+  { psqlPort = typeParser @Word16 `orElse` 5432
+  , dbName   = typeParser @String }
+
 main :: IO ()
 main = do
-  errOrConfig <- validateEnvW @(Config 'Dec)
+  errOrConfig <- validateEnvW defaultConfig
   case errOrConfig of
     Left err  -> putStrLn $ "Validation failed:\n" ++ renderParseError err
     Right cfg -> connectToDatabase cfg  -- cfg :: Config 'Res
 ```
 
-The magic happens with the `Column` type family and the `ColumnType` phantom type:
+The two column kinds:
 
-- **`Config 'Dec`** (Declaration): The type you write in the `instance` head and pass to `validateEnvW @(Config 'Dec)`. At the type level each field is `(witness, value)`, but the library never constructs a runtime value of `Config 'Dec` — you use it solely as a type-level argument.
-- **`Config 'Res`** (Result): The type you work with after parsing. Each field is just `value`.
-- **`Column c witness a`**: Expands to `(witness, a)` when `c = 'Dec`, or just `a` when `c = 'Res`.
+- **`Config 'Dec`** — a real runtime value. Each field is a `String -> Either String a` parser function. Pass it to `validateEnvW`; swap individual fields for different defaults or custom logic.
+- **`Config 'Res`** — the result after parsing. Each field is just the plain value.
+- **`Col c a`** — expands to `String -> Either String a` when `c = 'Dec`, or `a` when `c = 'Res`.
 
-Now your final config has no wrappers:
+No wrappers in the result:
 
 ```Haskell
 connectToDatabase :: Config 'Res -> IO Connection
-connectToDatabase cfg = connect $ defaultConnectInfo
-  { connectPort = psqlPort cfg  -- Direct access to Word16!
-  , connectDatabase = dbName cfg }
+connectToDatabase cfg = connect defaultConnectInfo
+  { connectPort    = cfg.psqlPort  -- direct Word16, no unwrapping
+  , connectDatabase = cfg.dbName }
 ```
 
-### Key Benefits
+### Runtime overrides
 
-1. **No Unpacking**: Your final data type contains raw values (Word16, String, etc.), not newtypes
-2. **Type-Level Defaults**: Default values are specified in the type signature using type-level naturals
-3. **Flexible Parsing**: Different witness types provide different parsing strategies (defaults, validation, transformation)
+Because the schema is a value, you can override any field before parsing:
 
-### Available Witnesses
+```Haskell
+-- Different default for a different environment:
+stagingConfig :: Config 'Dec
+stagingConfig = defaultConfig { psqlPort = typeParser @Word16 `orElse` 5433 }
 
-- **`Solo a`**: Standard parsing without special behaviour (equivalent to `TypeParser`)
-- **`DefaultNum n a`**: Numeric types with a type-level default value `n`
-- **`DefaultString s a`**: String types with a type-level default value `s`
-- **`DefaultBool b a`**: `Bool` with a type-level default; also accepts `true`/`false`, `t`/`f`, `1`/`0`
-- **Custom witnesses**: You can define your own by implementing the `TypeParserW` class
+-- Custom validation:
+strictDbConfig :: Config 'Dec
+strictDbConfig = defaultConfig
+  { dbName = \s -> do
+      name <- typeParser @String s
+      if length name > 32 then Left "DB name too long" else Right name }
+```
 
-More built-in witnesses will be provided.
+### Auto-derived schemas
 
-For more complex parsing needs, witnesses provide a way to augment behaviour without polluting your domain types with wrapper noise.
+If every field type has a `TypeParser` instance, `defaultSchema` derives the whole `'Dec` value automatically (all fields required, no defaults):
+
+```Haskell
+autoConfig :: Config 'Dec
+autoConfig = defaultSchema @Config
+
+-- Or validate directly:
+result <- validateEnvWDefault @Config
+```
+
+### Helpers
+
+- **`typeParser @T`** — standard parser for `T` from its `TypeParser` instance. Required by default (absent variable → error); `Maybe T` fields return `Right Nothing` when absent.
+- **`f \`orElse\` d`** — wrap parser `f` so an absent or empty variable returns `Right d`.
+- **`fromTypeParserW @W`** — build a field parser from a `TypeParserW` witness `W` (see below).
+
+### Witness bridge
+
+Existing witnesses implement `TypeParserW` and remain usable via `fromTypeParserW`:
+
+- **`DefaultNum n a`** — numeric type with type-level default `n`.
+- **`DefaultString s a`** — string type with type-level default `s`.
+- **`DefaultBool b Bool`** — lenient bool parser (accepts `true`/`1`/`t`) with type-level default `b`.
+- **Custom witnesses** — implement `TypeParserW` and pass to `fromTypeParserW`.
+
+```Haskell
+-- Equivalent ways to default psqlPort to 5432:
+psqlPort = typeParser @Word16 `orElse` 5432
+psqlPort = fromTypeParserW @(DefaultNum 5432 Word16)
+```
 
 [quickstart-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/QuickstartExample.hs
 [custom-mapping-example]: https://github.com/MMZK1526/mmzk-env/blob/main/app/CustomMappingExample.hs
