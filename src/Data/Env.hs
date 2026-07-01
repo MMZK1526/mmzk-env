@@ -49,7 +49,7 @@ validateEnvW mySchema
 validateEnvW mySchema { port = ''typeParser' \@Int \`orElse\` 5432 }
 @
 
-Use 'validateEnvWDefault' to auto-derive the schema from 'TypeParser'
+Use 'validateEnvWDefault' to auto-derive the schema from 'Data.Env.TypeParser.TypeParser'
 instances when no overrides are needed.
 
 Field names are converted from camelCase to UPPER_SNAKE_CASE. Notable
@@ -80,7 +80,7 @@ class (ExtractFields a, RecordParserW a) => EnvSchemaW a where
 {- | Validate using the auto-derived default schema.
 
 Shorthand for @'validateEnvW' ('defaultSchema' \@a)@; requires every field
-type to have a 'TypeParser' instance.
+type to have a 'Data.Env.TypeParser.TypeParser' instance.
 -}
 validateEnvWDefault
   :: forall a m

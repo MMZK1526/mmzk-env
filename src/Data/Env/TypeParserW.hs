@@ -44,8 +44,8 @@ class TypeParserW p a | p -> a where
   -- | Result to use when the environment variable is absent (empty string).
   --
   -- The default calls @'parseTypeW' proxy ""@, which is correct for witnesses
-  -- that supply their own default (e.g. 'DefaultNum', 'DefaultString',
-  -- 'DefaultBool'). Override this for witnesses that delegate to a
+  -- that supply their own default (e.g. 'Data.Env.Witness.DefaultNum.DefaultNum', 'Data.Env.Witness.DefaultString.DefaultString',
+  -- 'Data.Env.Witness.DefaultBool.DefaultBool'). Override this for witnesses that delegate to a
   -- 'TypeParser' instance — see the 'Solo' instance below.
   parseMissingW :: Proxy p -> Either String a
   parseMissingW proxy = parseTypeW proxy ""

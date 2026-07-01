@@ -1,7 +1,7 @@
 # Revision history for mmzk-env
 
 
-## 0.4.0.0 -- Unreleased
+## 0.4.0.0 -- 2026-07-01
 
 ### Value-level schema redesign (breaking)
 
