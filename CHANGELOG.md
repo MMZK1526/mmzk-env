@@ -1,7 +1,7 @@
 # Revision history for mmzk-env
 
 
-## 0.4.0.0 -- 2026-07-01
+## 0.5.0.0 -- 2026-07-01
 
 ### Value-level schema redesign (breaking)
 
@@ -69,24 +69,32 @@ are removed.
 `DefaultString`, `DefaultBool`) are unchanged. Witnesses remain usable
 via `fromTypeParserW`.
 
-### Structured errors (breaking, carried forward from pre-release)
 
-* All validators return `Either ParseError a` instead of `Either String a`.
-  Use `renderParseError` to format for display, or pattern-match on
-  `ParseError`/`FieldError`.
-* All field failures are collected in a single pass — no short-circuiting.
-* `TypeParser` gains `parseMissing :: Either String a` (default:
-  `Left "missing required environment variable"`). Custom instances that
-  handled `""` inside `parseType` to supply a default must move that logic
-  to `parseMissing`.
-* `TypeParserW` gains `parseMissingW :: Proxy p -> Either String a`
-  (default: `parseTypeW proxy ""`).
-* `Data.Env.ParseError` is now an exposed module; `ParseError(..)`,
-  `FieldError(..)`, `renderParseError`, `renderFieldError` are also
-  re-exported from `Data.Env`.
-* `EnumParser` error messages now read
-  `invalid value "x"; expected one of: A, B, C`.
-* Base type parsers use readable labels (`expected an integer`, etc.).
+## 0.4.0.0 -- 2026-04-16
+
+**Breaking changes:**
+
+* `validateEnv`, `validateEnvWith`, `validateEnvW`, `validateEnvWWith`, `parseRecord`, and `parseRecordW` now return `Either ParseError a` instead of `Either String a`. Code that matches on `Left err` where `err :: String` must be updated to use `renderParseError err` (or pattern-match on `ParseError`/`FieldError`).
+
+* `TypeParser` gains a new method `parseMissing :: Either String a` (default: `Left "missing required environment variable"`). Custom `TypeParser` instances that handled the empty-string case inside `parseType` to supply a default **must** move that logic to `parseMissing` — `parseType ""` is no longer called for absent environment variables.
+
+* `TypeParserW` gains a new method `parseMissingW :: Proxy p -> Either String a` (default: `parseTypeW proxy ""`). Custom `TypeParserW` instances that relied on `parseTypeW proxy ""` being called for absent variables are unaffected by the default; however, the same caveat as `parseMissing` applies if an instance overrides `parseTypeW` for the empty-string case.
+
+**New exports:**
+
+* `Data.Env.ParseError` is now an exposed module exporting `ParseError(..)`, `FieldError(..)`, `renderParseError`, and `renderFieldError`. All are also re-exported from `Data.Env`.
+
+**Improved error messages:**
+
+* All field failures are now collected in a single pass (no short-circuiting on the first error). `ParseError` is a list of `FieldError` values, one per failing field, in field-declaration order.
+
+* Missing required environment variables now produce `"missing required environment variable"` instead of a gigaparsec parse error on an empty string.
+
+* Base type parsers (`String`, `Int`, `Word`, `Bool`, numeric fixed-width types) now use `P.label` to produce readable expected-descriptions (e.g. `expected an integer`) instead of raw token expectations.
+
+* `renderParseError` formats errors with the field name on its own header line followed by the detail indented below; multiple failures are numbered.
+
+* `EnumParser` error messages now read `invalid value "x"; expected one of: A, B, C` instead of the previous format.
 
 
 ## 0.3.0.0 -- 2026-03-22
